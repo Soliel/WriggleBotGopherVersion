@@ -46,9 +46,6 @@ func (handler CommandHandler) Register(name string, command Command) {
 	}
 }
 
-//Triggered by AddHandler in main whenever a message is sent, Arguements Match MessageCreate Interface.
-
 func TestCommand(ctx Context) {
 	_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "The Test has succeded.")
 }
-//TODO: Create a map based Command Handler that I can register functions to.
