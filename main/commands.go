@@ -2,35 +2,53 @@ package main
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"fmt"
 )
 
-func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
-
-	if m.Author.ID == BotID {
-		return
+type (
+	Command func(Context)
+	CmdMap map[string]Command
+	CommandHandler struct {
+		Cmds CmdMap
 	}
-
-	if m.Content == "Fmuph" {
-		_,_ = s.ChannelMessageSend(m.ChannelID, "How did you guess that?")
+	
+	Context struct {
+		Msg     *discordgo.MessageCreate
+		Session *discordgo.Session
+		Args    []string
 	}
+)
 
-	go insertMessageDB(m)
+
+
+//create a command handler and associated map and pass the memory address back.
+func NewCommandHandler() *CommandHandler {
+	return &CommandHandler{make(CmdMap)}
 }
 
-func insertMessageDB(m *discordgo.MessageCreate) {
-
-	tx, err := DataStore.Begin()
-	CheckErr(err)
-	defer  tx.Rollback()
-
-	stmt, err := tx.Prepare("INSERT INTO testtable(userID, Message) VALUES (?, ?)")
-	CheckErr(err)
-	defer stmt.Close()
-
-	_, _ = stmt.Exec(m.Author.ID, m.Content)
-
-	err = tx.Commit()
-	CheckErr(err)
+//return a map of registered commands
+func (handler CommandHandler) GetCmds() CmdMap {
+	return handler.Cmds
 }
 
+//Pull a specific command from the map and return the memory address of the function as well as a true or false for error checking
+func (handler CommandHandler) Get(name string) (*Command, bool) {
+	cmd, found := handler.Cmds[name]
+	fmt.Println(cmd, found)
+	return &cmd, found
+}
+
+//Adds a command to the global command map and assigns it's name to be accessed by.
+func (handler CommandHandler) Register(name string, command Command) {
+	handler.Cmds[name] = command
+	if len(name) > 1 {
+		handler.Cmds[name[:1]] = command
+	}
+}
+
+//Triggered by AddHandler in main whenever a message is sent, Arguements Match MessageCreate Interface.
+
+func TestCommand(ctx Context) {
+	_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "The Test has succeded.")
+}
 //TODO: Create a map based Command Handler that I can register functions to.
