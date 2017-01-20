@@ -33,7 +33,7 @@ func main() {
 
 	//create discord session, create a database connection, and check for errors. 
 	dg, err := discordgo.New("Bot " + Token)
-	DataStore, err = sql.Open("mysql", "root:M38a67c%%7@tcp(127.0.0.1:3306)/wriggletest")
+	DataStore, err = sql.Open("mysql", "root:CHILL@tcp(127.0.0.1:3306)/wriggletest")
 	//Test for an error connecting to a database.
 	err = DataStore.Ping()
 
