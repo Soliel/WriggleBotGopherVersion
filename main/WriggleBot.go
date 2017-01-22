@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
-	"flag"
+	//"flag"
 	"github.com/bwmarrin/discordgo"
 	"database/sql"
 	_"github.com/go-sql-driver/mysql"
 	"log"
 	"strings"
+	"bytes"
+	"io/ioutil"
+	"encoding/json"
 )
 
 //Setting global variables and giving DB a global scope.
@@ -16,24 +19,43 @@ const (
 )
 
 var (
-	Token      string
+	conf       *Config
 	BotID      string
 	DataStore  *sql.DB
 	CmdHandler *CommandHandler
 )
 
-//getting command line token flags
-//TODO: Update to config file instead.
-func init() {
-	flag.StringVar(&Token, "t", "", "Bot Token")
-	flag.Parse()
+type Config struct {
+  BotToken     string `json:"bot_token"`
+  DatabaseIP   string `json:"database_ip"`
+  DatabaseUser string `json:"database_user"`
+  DatabasePass string `json:"database_password"`
+  DatabasePort string `json:"database_port"`
+  DatabaseName string `json:"database_name"`
 }
 
 func main() {
+	//Create a string buffer to parse my database information from JSON.
+	var buffer bytes.Buffer
+	
+	//load a json config file to make launching bot easier.
+	conf = LoadConfig("config.json")
 
-	//create discord session, create a database connection, and check for errors. 
-	dg, err := discordgo.New("Bot " + Token)
-	DataStore, err = sql.Open("mysql", "root:CHILL@tcp(127.0.0.1:3306)/wriggletest")
+	//Concatenate database access stream inside of buffer 
+	buffer.WriteString(conf.DatabaseUser)
+	buffer.WriteString(":")
+	buffer.WriteString(conf.DatabasePass)
+	buffer.WriteString("@tcp(")
+	buffer.WriteString(conf.DatabaseIP)
+	buffer.WriteString(":")
+	buffer.WriteString(conf.DatabasePort)
+	buffer.WriteString(")/")
+	buffer.WriteString(conf.DatabaseName)
+	
+	//create discord session, create a database connection, and check for errors.
+	dg, err := discordgo.New("Bot " + conf.BotToken)
+	DataStore, err = sql.Open("mysql", buffer.String())
+	
 	//Test for an error connecting to a database.
 	err = DataStore.Ping()
 
@@ -46,6 +68,9 @@ func main() {
 	//initialize the Command Handler & Register Commands.
 	CmdHandler = NewCommandHandler()
 	registerCommands()
+	
+	//Initialize adoption list to track current adoptions in a global scope.
+	//aList := make(map[string]*discordgo.User)
 	
 	//close database after Main ends, should only happen when program exits.
 	defer DataStore.Close()
@@ -130,8 +155,25 @@ func CheckErr(err error) {
 func registerCommands() {
 	CmdHandler.Register("test", TestCommand)
 	CmdHandler.Register("betatest", TestCommandTwo)
+	CmdHandler.Register("adopt", AdoptUsers)
 }
 
 func TestCommandTwo(ctx Context) {
 	_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "The second test succeded.")
+}
+
+func LoadConfig(filename string) *Config {
+  body, err := ioutil.ReadFile(filename)
+  if err != nil {
+    fmt.Println("Error loading config, ", err)
+    return nil
+  }
+  
+  var confData Config
+  err = json.Unmarshal(body, &confData)
+	if err != nil {
+		fmt.Println("Error parsing JSON data, ", err)
+		return nil
+	}
+	return &confData
 }
