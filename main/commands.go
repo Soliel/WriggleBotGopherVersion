@@ -15,6 +15,8 @@ type (
 	Context struct {
 		Msg     *discordgo.MessageCreate
 		Session *discordgo.Session
+		Guild   *discordgo.Guild
+		Channel *discordgo.Channel
 		Args    []string
 	}
 )

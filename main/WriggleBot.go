@@ -6,7 +6,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"database/sql"
 	_"github.com/go-sql-driver/mysql"
-	"log"
 	"strings"
 	"bytes"
 	"io/ioutil"
@@ -59,7 +58,7 @@ func main() {
 	//Test for an error connecting to a database.
 	err = DataStore.Ping()
 
-	//if an error occured creating connections log it here.
+	//if an error occurred creating connections log it here.
 	if err != nil {
 		fmt.Println("Error creating discord session, or establishing a database connection ", err)
 		return
@@ -70,7 +69,7 @@ func main() {
 	registerCommands()
 	
 	//Initialize adoption list to track current adoptions in a global scope.
-	//aList := make(map[string]*discordgo.User)
+	aList := make(map[string]*discordgo.User)
 	
 	//close database after Main ends, should only happen when program exits.
 	defer DataStore.Close()
@@ -84,8 +83,10 @@ func main() {
 	//Save bot users ID to a global variable, used to stop command loops
 	BotID = u.ID
 
-	//Create a message handler
+	//Create a handler for events
 	dg.AddHandler(onMessageReceived)
+	dg.AddHandler(onGuildMemberChunk)
+
 
 	//Start listening to discord, Events start firing.
 	err = dg.Open()
@@ -105,30 +106,39 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BotID {
 		return
 	}
-	
-	fmt.Println("Checking against length of prefix.")
+
 	if len(m.Content) < len(PREFIX) {
 		return
 	}
-	
-	fmt.Println("Checking prefix")
+
 	if m.Content[:len(PREFIX)] != PREFIX {
 		return
 	}
-	
-	fmt.Println("Parsing arguements")
+
 	content := m.Content[len(PREFIX):]
 	if len(content) < 1 {
 		return
 	}
-	
-	fmt.Println("Searching for commands.")
+
 	args := strings.Fields(content)
 	name := strings.ToLower(args[0])
+
 	fmt.Println(args)
 	command, found := CmdHandler.Get(name)
 	if !found {
 		_,_ = s.ChannelMessageSend(m.ChannelID, "This command is not valid.")
+		return
+	}
+
+	channel, err := s.State.Channel(m.ChannelID)
+	if err != nil {
+		fmt.Println("Error getting channel, ", err)
+		return
+	}
+
+	guild, err := s.State.Guild(channel.GuildID)
+	if err != nil {
+		fmt.Println("Error getting guild, ", err)
 		return
 	}
 	
@@ -137,6 +147,8 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	ctx.Args = args[1:]
 	ctx.Session = s
 	ctx.Msg = m
+	ctx.Guild = guild
+	ctx.Channel = channel
 	
 	//pass command pointer and run the function
 	c := *command
@@ -144,13 +156,26 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 }
 
-//Make fatal errors easier.
-func CheckErr(err error) {
-
-	if err != nil {
-		log.Fatal(err)
-	}
+func onGuildMemberChunk(s *discordgo.Session, members *discordgo.GuildMembersChunk) {
+	fmt.Println(members.Members[0].User.ID)
 }
+
+func LoadConfig(filename string) *Config {
+	body, err := ioutil.ReadFile(filename)
+	if err != nil {
+		fmt.Println("Error loading config, ", err)
+		return nil
+	}
+
+	var confData Config
+	err = json.Unmarshal(body, &confData)
+	if err != nil {
+		fmt.Println("Error parsing JSON data, ", err)
+		return nil
+	}
+	return &confData
+}
+
 
 func registerCommands() {
 	CmdHandler.Register("test", TestCommand)
@@ -160,20 +185,4 @@ func registerCommands() {
 
 func TestCommandTwo(ctx Context) {
 	_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "The second test succeded.")
-}
-
-func LoadConfig(filename string) *Config {
-  body, err := ioutil.ReadFile(filename)
-  if err != nil {
-    fmt.Println("Error loading config, ", err)
-    return nil
-  }
-  
-  var confData Config
-  err = json.Unmarshal(body, &confData)
-	if err != nil {
-		fmt.Println("Error parsing JSON data, ", err)
-		return nil
-	}
-	return &confData
 }
