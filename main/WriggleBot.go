@@ -24,7 +24,7 @@ var (
 	DataStore  *sql.DB
 	CmdHandler *CommandHandler
 	MemChan    chan *discordgo.User
-	AList map[string]*discordgo.User
+	AList      map[string]*discordgo.User
 	userReqLock = &sync.Mutex{}
 )
 
@@ -125,8 +125,9 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	content = strings.ToLower(content)
 	args := strings.Fields(content)
-	name := strings.ToLower(args[0])
+	name := args[0]
 
 	fmt.Println(args)
 	command, found := CmdHandler.Get(name)
