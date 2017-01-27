@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	//"flag"
 	"github.com/bwmarrin/discordgo"
 	"database/sql"
 	_"github.com/go-sql-driver/mysql"
@@ -10,6 +9,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"encoding/json"
+	"sync"
 )
 
 //Setting global variables and giving DB a global scope.
@@ -17,11 +17,15 @@ const (
 	PREFIX = "wrig "
 )
 
+//GLOBAL VARS
 var (
 	conf       *Config
 	BotID      string
 	DataStore  *sql.DB
 	CmdHandler *CommandHandler
+	MemChan    chan *discordgo.User
+	AList map[string]*discordgo.User
+	userReqLock = &sync.Mutex{}
 )
 
 type Config struct {
@@ -64,12 +68,13 @@ func main() {
 		return
 	}
 	
-	//initialize the Command Handler & Register Commands.
+	//initialize the Command Handler & Register Commands
 	CmdHandler = NewCommandHandler()
 	registerCommands()
 	
 	//Initialize adoption list to track current adoptions in a global scope.
-	aList := make(map[string]*discordgo.User)
+	AList = make(map[string]*discordgo.User)
+	MemChan = make(chan *discordgo.User)
 	
 	//close database after Main ends, should only happen when program exits.
 	defer DataStore.Close()
@@ -152,13 +157,10 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	
 	//pass command pointer and run the function
 	c := *command
-	c(*ctx)
-
+	go c(*ctx)
 }
 
-func onGuildMemberChunk(s *discordgo.Session, members *discordgo.GuildMembersChunk) {
-	fmt.Println(members.Members[0].User.ID)
-}
+
 
 func LoadConfig(filename string) *Config {
 	body, err := ioutil.ReadFile(filename)
