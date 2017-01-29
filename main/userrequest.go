@@ -4,6 +4,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"fmt"
 	"errors"
+	"time"
 )
 
 func onGuildMemberChunk(s *discordgo.Session, members *discordgo.GuildMembersChunk) {
@@ -13,10 +14,14 @@ func onGuildMemberChunk(s *discordgo.Session, members *discordgo.GuildMembersChu
 
 //When you access this function, lock it with userReqLock.
 //requests a user using a string.
-func requestUserFromGuild(ctx Context) (*discordgo.User) {
+func requestUserFromGuild(ctx Context) (*discordgo.User, error){
 	_ = ctx.Session.RequestGuildMembers(ctx.Guild.ID, ctx.Args[0], 1)
-	reqUser := <- MemChan
-	return reqUser
+	select{
+		case reqUser := <- MemChan:
+			return reqUser, nil
+		case <- time.After(time.Second):
+			return nil, errors.New("Discord request timed out.")
+	}
 }
 
 func checkDuplicatePets(ID string) (e error){

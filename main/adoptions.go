@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 func AdoptUsers(ctx Context) {
@@ -46,7 +47,7 @@ func AdoptUsers(ctx Context) {
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(ctx.Msg.Author.ID, ctx.Msg.Author.Username, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, AList[ctx.Msg.Author.ID].ID)
+		_, err = stmt.Exec(ctx.Msg.Author.ID, ctx.Msg.Author.Username, 1, 10, 10, 20, 1, 5, 80, 0, 0, 0, 0, 0, 0, AList[ctx.Msg.Author.ID].ID)
 		if err != nil {
 			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
 			delete(AList, ctx.Msg.Author.ID)
@@ -112,6 +113,7 @@ func AdoptUsers(ctx Context) {
 			return
 		}
 		AList[pet_user.ID] = ctx.Msg.Author
+		go timeoutAdoption(pet_user.ID)
 		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, pet_user.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
 	}
 	
@@ -122,7 +124,10 @@ func AdoptUsers(ctx Context) {
 		
 		//We lock the function with UserReqLock to ensure it is the only one being requested.
 		userReqLock.Lock()
-		reqUser := requestUserFromGuild(ctx)
+		reqUser, err := requestUserFromGuild(ctx)
+		if err != nil {
+			return
+		}
 
 		dupErr := checkDuplicatePets(reqUser.ID)
 		if dupErr != nil {
@@ -132,10 +137,19 @@ func AdoptUsers(ctx Context) {
 		}
 
 		AList[reqUser.ID] = ctx.Msg.Author
+		go timeoutAdoption(reqUser.ID)
 		userReqLock.Unlock()
 
 		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, reqUser.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
 		return
 	}
+	return
+}
+
+//This should always be called in a goroutine. Creates an intentional "race" so that after 15 seconds the adoption times out.
+func timeoutAdoption(key string) {
+	time.Sleep(time.Second*15)
+	fmt.Println("No response in 15 seconds, adoption aborting.")
+	delete(AList, key)
 	return
 }
