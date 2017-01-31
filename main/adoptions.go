@@ -46,7 +46,7 @@ func AdoptUsers(ctx Context) {
 			return
 		}
 		defer stmt.Close()
-
+			
 		_, err = stmt.Exec(ctx.Msg.Author.ID, ctx.Msg.Author.Username, 1, 10, 10, 20, 1, 5, 80, 0, 0, 0, 0, 0, 0, AList[ctx.Msg.Author.ID].ID)
 		if err != nil {
 			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
@@ -54,30 +54,30 @@ func AdoptUsers(ctx Context) {
 			fmt.Println(err)
 			return
 		}
-
+			
 		dupOwn := checkDuplicateOwners(AList[ctx.Msg.Author.ID].ID)
 		if !dupOwn {
 			stmt, _ = tx.Prepare("INSERT INTO ownertable VALUES(?,?,?,?)")
 			stmt.Exec(AList[ctx.Msg.Author.ID].ID, AList[ctx.Msg.Author.ID].Username, 1, 1)
 		}
-
+			
 		if dupOwn {
-
+			
 			var petamnt int
-
+			
 			err = DataStore.QueryRow("SELECT PetAmount FROM ownertable WHERE UserID = ?", AList[ctx.Msg.Author.ID].ID).Scan(&petamnt)
 			if err != nil {
 				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "SQL Query failed to find Owner, adoption aborting.")
 				return
 			}
-
+			
 			stmt, err = tx.Prepare("UPDATE ownertable SET PetAmount = ? WHERE UserID = ?")
 			if err != nil {
 				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
 				return
 			}
 			fmt.Println(stmt)
-
+			
 			res, err := stmt.Exec(petamnt + 1, AList[ctx.Msg.Author.ID].ID)
 			if err != nil {
 				fmt.Println(err)
@@ -86,7 +86,7 @@ func AdoptUsers(ctx Context) {
 			}
 			fmt.Println(res)
 		}
-
+		
 		err = tx.Commit()
 		if err != nil {
 			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not commit changes to database, adoption aborted.")
