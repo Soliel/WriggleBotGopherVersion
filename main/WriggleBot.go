@@ -40,7 +40,7 @@ type Config struct {
 func main() {
 	//Create a string buffer to parse my database information from JSON.
 	var buffer bytes.Buffer
-	
+
 	//load a json config file to make launching bot easier.
 	conf = LoadConfig("config.json")
 
@@ -54,11 +54,11 @@ func main() {
 	buffer.WriteString(conf.DatabasePort)
 	buffer.WriteString(")/")
 	buffer.WriteString(conf.DatabaseName)
-	
+
 	//create discord session, create a database connection, and check for errors.
 	dg, err := discordgo.New("Bot " + conf.BotToken)
 	DataStore, err = sql.Open("mysql", buffer.String())
-	
+
 	//Test for an error connecting to a database.
 	err = DataStore.Ping()
 
@@ -67,15 +67,15 @@ func main() {
 		fmt.Println("Error creating discord session, or establishing a database connection ", err)
 		return
 	}
-	
+
 	//initialize the Command Handler & Register Commands
 	CmdHandler = NewCommandHandler()
 	registerCommands()
-	
+
 	//Initialize adoption list to track current adoptions in a global scope.
 	AList = make(map[string]*discordgo.User)
 	MemChan = make(chan *discordgo.User)
-	
+
 	//close database after Main ends, should only happen when program exits.
 	defer DataStore.Close()
 
@@ -147,7 +147,7 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 		fmt.Println("Error getting guild, ", err)
 		return
 	}
-	
+
 	//set up my context to pass to whatever function is called.
 	ctx := new(Context)
 	ctx.Args = args[1:]
@@ -155,7 +155,7 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	ctx.Msg = m
 	ctx.Guild = guild
 	ctx.Channel = channel
-	
+
 	//pass command pointer and run the function
 	c := *command
 	go c(*ctx)
@@ -184,6 +184,7 @@ func registerCommands() {
 	CmdHandler.Register("test", TestCommand)
 	CmdHandler.Register("betatest", TestCommandTwo)
 	CmdHandler.Register("adopt", AdoptUsers)
+	CmdHandler.Register("quickbattle", QuickBattle)
 }
 
 func TestCommandTwo(ctx Context) {

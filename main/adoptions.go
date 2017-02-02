@@ -121,10 +121,10 @@ func AdoptUsers(ctx Context) {
 	if err != nil {
 		fmt.Println("User could not be parsed with ID, showing error, ", err)
 		fmt.Println("Attempting to locate user by name")
-		
+
 		//We lock the function with UserReqLock to ensure it is the only one being requested.
 		userReqLock.Lock()
-		reqUser, err := requestUserFromGuild(ctx)
+		reqUser, err := requestUserFromGuild(ctx.Session, ctx.Guild.ID, ctx.Args[0])
 		if err != nil {
 			return
 		}

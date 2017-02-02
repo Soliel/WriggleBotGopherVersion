@@ -14,8 +14,8 @@ func onGuildMemberChunk(s *discordgo.Session, members *discordgo.GuildMembersChu
 
 //When you access this function, lock it with userReqLock.
 //requests a user using a string.
-func requestUserFromGuild(ctx Context) (*discordgo.User, error){
-	_ = ctx.Session.RequestGuildMembers(ctx.Guild.ID, ctx.Args[0], 1)
+func requestUserFromGuild(s *discordgo.Session, guild string, user string) (*discordgo.User, error){
+	_ = s.RequestGuildMembers(guild, user, 1)
 	select{
 		case reqUser := <- MemChan:
 			return reqUser, nil
