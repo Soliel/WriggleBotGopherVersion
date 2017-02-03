@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func AdoptUsers(ctx Context) {
+func adoptUsers(ctx context) {
 
 	if len(ctx.Args) < 1 {
 		_, _ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You must specify a user to adopt.")
@@ -76,15 +76,13 @@ func AdoptUsers(ctx Context) {
 				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
 				return
 			}
-			fmt.Println(stmt)
 			
-			res, err := stmt.Exec(petamnt + 1, AList[ctx.Msg.Author.ID].ID)
+			_, err := stmt.Exec(petamnt + 1, AList[ctx.Msg.Author.ID].ID)
 			if err != nil {
 				fmt.Println(err)
 				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
 				return
 			}
-			fmt.Println(res)
 		}
 		
 		err = tx.Commit()
@@ -105,16 +103,16 @@ func AdoptUsers(ctx Context) {
 	}
 	
 	//Search for user by ID in case they entered one.
-	pet_user, err := ctx.Session.User(ctx.Args[0])
+	reqUser, err := ctx.Session.User(ctx.Args[0])
 	if err == nil {
-		dupErr := checkDuplicatePets(pet_user.ID)
+		dupErr := checkDuplicatePets(reqUser.ID)
 		if dupErr != nil {
 			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, dupErr.Error())
 			return
 		}
-		AList[pet_user.ID] = ctx.Msg.Author
-		go timeoutAdoption(pet_user.ID)
-		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, pet_user.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
+		AList[reqUser.ID] = ctx.Msg.Author
+		go timeoutAdoption(reqUser.ID)
+		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, reqUser.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
 	}
 	
 	//Start a query for the user, Causes Guild Member Chunk event to fire. 

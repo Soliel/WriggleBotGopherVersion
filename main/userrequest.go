@@ -2,14 +2,13 @@ package main
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"fmt"
+	//"fmt"
 	"errors"
 	"time"
 )
 
 func onGuildMemberChunk(s *discordgo.Session, members *discordgo.GuildMembersChunk) {
 	MemChan <- members.Members[0].User
-	fmt.Println(members.Members[0].User.Username)
 }
 
 //When you access this function, lock it with userReqLock.

@@ -19,16 +19,16 @@ const (
 
 //GLOBAL VARS
 var (
-	conf       *Config
+	conf       *config
 	BotID      string
 	DataStore  *sql.DB
-	CmdHandler *CommandHandler
+	CmdHandler *commandHandler
 	MemChan    chan *discordgo.User
 	AList      map[string]*discordgo.User
 	userReqLock = &sync.Mutex{}
 )
 
-type Config struct {
+type config struct {
   BotToken     string `json:"bot_token"`
   DatabaseIP   string `json:"database_ip"`
   DatabaseUser string `json:"database_user"`
@@ -42,7 +42,7 @@ func main() {
 	var buffer bytes.Buffer
 
 	//load a json config file to make launching bot easier.
-	conf = LoadConfig("config.json")
+	conf = loadConfig("config.json")
 
 	//Concatenate database access stream inside of buffer 
 	buffer.WriteString(conf.DatabaseUser)
@@ -69,7 +69,7 @@ func main() {
 	}
 
 	//initialize the Command Handler & Register Commands
-	CmdHandler = NewCommandHandler()
+	CmdHandler = newCommandHandler()
 	registerCommands()
 
 	//Initialize adoption list to track current adoptions in a global scope.
@@ -129,10 +129,8 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	args := strings.Fields(content)
 	name := args[0]
 
-	fmt.Println(args)
-	command, found := CmdHandler.Get(name)
+	comman, found := CmdHandler.get(name)
 	if !found {
-		_,_ = s.ChannelMessageSend(m.ChannelID, "This command is not valid.")
 		return
 	}
 
@@ -149,7 +147,7 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	//set up my context to pass to whatever function is called.
-	ctx := new(Context)
+	ctx := new(context)
 	ctx.Args = args[1:]
 	ctx.Session = s
 	ctx.Msg = m
@@ -157,20 +155,20 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	ctx.Channel = channel
 
 	//pass command pointer and run the function
-	c := *command
+	c := *comman
 	go c(*ctx)
 }
 
 
 
-func LoadConfig(filename string) *Config {
+func loadConfig(filename string) *config {
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Println("Error loading config, ", err)
 		return nil
 	}
 
-	var confData Config
+	var confData config
 	err = json.Unmarshal(body, &confData)
 	if err != nil {
 		fmt.Println("Error parsing JSON data, ", err)
@@ -181,12 +179,12 @@ func LoadConfig(filename string) *Config {
 
 
 func registerCommands() {
-	CmdHandler.Register("test", TestCommand)
-	CmdHandler.Register("betatest", TestCommandTwo)
-	CmdHandler.Register("adopt", AdoptUsers)
-	CmdHandler.Register("quickbattle", QuickBattle)
+	CmdHandler.register("test", testCommand)
+	CmdHandler.register("betatest", testCommandTwo)
+	CmdHandler.register("adopt", adoptUsers)
+	CmdHandler.register("quickbattle", quickBattle)
 }
 
-func TestCommandTwo(ctx Context) {
+func testCommandTwo(ctx context) {
 	_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "The second test succeded.")
 }

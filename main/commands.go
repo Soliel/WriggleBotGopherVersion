@@ -2,17 +2,17 @@ package main
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"fmt"
+	//"fmt"
 )
 
 type (
-	Command func(Context)
-	CmdMap map[string]Command
-	CommandHandler struct {
-		Cmds CmdMap
+	command func(context)
+	cmdMap map[string]command
+	commandHandler struct {
+		Cmds cmdMap
 	}
 	
-	Context struct {
+	context struct {
 		Msg     *discordgo.MessageCreate
 		Session *discordgo.Session
 		Guild   *discordgo.Guild
@@ -24,30 +24,29 @@ type (
 
 
 //create a command handler and associated map and pass the memory address back.
-func NewCommandHandler() *CommandHandler {
-	return &CommandHandler{make(CmdMap)}
+func newCommandHandler() *commandHandler {
+	return &commandHandler{make(cmdMap)}
 }
 
 //return a map of registered commands
-func (handler CommandHandler) GetCmds() CmdMap {
+func (handler commandHandler) getCmds() cmdMap {
 	return handler.Cmds
 }
 
 //Pull a specific command from the map and return the memory address of the function as well as a true or false for error checking
-func (handler CommandHandler) Get(name string) (*Command, bool) {
+func (handler commandHandler) get(name string) (*command, bool) {
 	cmd, found := handler.Cmds[name]
-	fmt.Println(cmd, found)
 	return &cmd, found
 }
 
 //Adds a command to the global command map and assigns it's name to be accessed by.
-func (handler CommandHandler) Register(name string, command Command) {
-	handler.Cmds[name] = command
+func (handler commandHandler) register(name string, comman command) {
+	handler.Cmds[name] = comman
 	if len(name) > 1 {
-		handler.Cmds[name[:1]] = command
+		handler.Cmds[name[:1]] = comman
 	}
 }
 
-func TestCommand(ctx Context) {
+func testCommand(ctx context) {
 	_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "The Test has succeded.")
 }
