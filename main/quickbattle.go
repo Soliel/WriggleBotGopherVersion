@@ -1,7 +1,7 @@
 package main
 
 import(
-	//"fmt"
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -34,7 +34,10 @@ func quickBattle(ctx context) {
 	if err != nil {
 		return
 	}
-
+	
+	if allypet.OwnerID != ctx.Msg.Author.ID {
+		return
+	}
 
 	doingBattle := true
 	
@@ -55,6 +58,7 @@ func quickBattle(ctx context) {
 		}
 		
 		allypet.EffectiveHP -= getDamage(enemypet, allypet)
+			fmt.Println("ally HP: ", allypet.EffectiveHP)
 	}
 }
 
