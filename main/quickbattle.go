@@ -3,6 +3,7 @@ package main
 import(
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"math/rand"
 )
 
 type pet struct {
@@ -12,8 +13,8 @@ type pet struct {
 	EffectiveDEF float64
 	EffectiveHP  float64
 	EffectiveCRI float64
-	EffectiveEVA float64
-	EffectiveACC float64
+	EffectiveEVA int
+	EffectiveACC int
 	Experience   int
 	Level        int
 }
@@ -42,28 +43,35 @@ func quickBattle(ctx context) {
 	doingBattle := true
 	
 	
-		for doingBattle {
+	for doingBattle {
 		if allypet.EffectiveHP <= 0 {
 			_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You lost")
 			doingBattle = false
 			return
 		}
 		
-		enemypet.EffectiveHP -= getDamage(allypet, enemypet)
-		
+		if doesHit(allypet, enemypet) {
+			enemypet.EffectiveHP -= getDamage(allypet, enemypet)
+		}
+			
 		if enemypet.EffectiveHP <= 0 {
 			_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You won!")
 			doingBattle = false
 			return
 		}
-		
-		allypet.EffectiveHP -= getDamage(enemypet, allypet)
-			fmt.Println("ally HP: ", allypet.EffectiveHP)
+			
+		if doesHit(enemypet, allypet) {
+			allypet.EffectiveHP -= getDamage(enemypet, allypet)	
+		}	
 	}
 }
 
 //TODO: add Crit 
 func getDamage(attacker pet, defender pet) (float64) {
+	if doesCrit(attacker) {
+		return 2*(attacker.EffectiveATK * (100.00/(defender.EffectiveDEF + 100.00)))
+	}
+	
 	return attacker.EffectiveATK * (100.00/(defender.EffectiveDEF + 100.00))
 }
 
@@ -71,12 +79,10 @@ func getDamage(attacker pet, defender pet) (float64) {
 func getPetUser(userarg string, ctx context) (pet, error) {
 	reqPet := new(pet)
 	var (
-		AttribATK, AttribDEF, AttribHP,
-		AttribLCK, AttribEVA, AttribACC,
-		TrainedATK, TrainedDEF, TrainedCRI,
-		TrainedEVA, TrainedACC float64
+		AttribATK, AttribDEF, AttribHP, AttribLCK, 
+		TrainedATK, TrainedDEF, TrainedCRI float64
 		OwnerID, PetID, PetName string
-		Level, Experience int
+		Level, Experience, AttribEVA, AttribACC, TrainedEVA, TrainedACC int
 	)
 
 	PetUser, err := ctx.Session.User(userarg)
@@ -108,7 +114,7 @@ func getPetUser(userarg string, ctx context) (pet, error) {
 	reqPet.EffectiveATK = AttribATK + TrainedATK
 	reqPet.EffectiveDEF = AttribDEF + TrainedDEF
 	reqPet.EffectiveHP  = AttribHP
-	reqPet.EffectiveCRI = AttribLCK + TrainedCRI
+	reqPet.EffectiveCRI = (0.04*AttribLCK) + (0.08 * TrainedCRI)
 	reqPet.EffectiveEVA = AttribEVA + TrainedEVA
 	reqPet.EffectiveACC = AttribACC + TrainedACC
 	reqPet.OwnerID      = OwnerID
@@ -116,4 +122,27 @@ func getPetUser(userarg string, ctx context) (pet, error) {
 	reqPet.Level        = Level
 
 	return *reqPet, nil
+}
+
+func doesHit(attacker pet, defender pet) (bool){
+	chanceToHit := attacker.EffectiveACC - defender.EffectiveEVA
+	
+	if rand.Intn(100) < chanceToHit {
+		return true
+	}
+	
+	fmt.Println(attacker.PetUser.Username, " miss!")
+	return false
+}
+
+func doesCrit(attacker pet) (bool) {
+	critRand := float64(rand.Intn(100))
+	
+	if critRand < attacker.EffectiveCRI {
+		fmt.Println(attacker.PetUser.Username, " rolled a", critRand, " crit!")
+		return true
+	}
+	
+	return false
+	
 }
