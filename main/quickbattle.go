@@ -45,7 +45,7 @@ func quickBattle(ctx context) {
 	
 	for doingBattle {
 		if allypet.EffectiveHP <= 0 {
-			_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You lost")
+			_,_ = ctx.Session.ChannelMessageSendEmbed(ctx.Msg.ChannelID, createResultEmbed(enemypet, allypet))
 			doingBattle = false
 			return
 		}
@@ -55,7 +55,7 @@ func quickBattle(ctx context) {
 		}
 			
 		if enemypet.EffectiveHP <= 0 {
-			_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You won!")
+			_,_ = ctx.Session.ChannelMessageSendEmbed(ctx.Msg.ChannelID, createResultEmbed(allypet, enemypet))
 			doingBattle = false
 			return
 		}
@@ -65,8 +65,7 @@ func quickBattle(ctx context) {
 		}	
 	}
 }
-
-//TODO: add Crit 
+//calculates the damage dealt by the attacking pet
 func getDamage(attacker pet, defender pet) (float64) {
 	if doesCrit(attacker) {
 		return 2*(attacker.EffectiveATK * (100.00/(defender.EffectiveDEF + 100.00)))
@@ -88,6 +87,7 @@ func getPetUser(userarg string, ctx context) (pet, error) {
 	PetUser, err := ctx.Session.User(userarg)
 	reqPet.PetUser = PetUser
 
+	//if asking for a user by snowflake ID fails, request a user from the guild list.
 	if err != nil {
 		userReqLock.Lock()
 
@@ -101,6 +101,7 @@ func getPetUser(userarg string, ctx context) (pet, error) {
 		userReqLock.Unlock()
 	}
 
+	//Grab the pet from the database based on userID
 	err = DataStore.QueryRow("SELECT * FROM pettable WHERE UserID = ?", reqPet.PetUser.ID).Scan(&PetID , &PetName, &Level, &AttribATK, &AttribDEF, &AttribHP,
 													&AttribLCK, &AttribEVA, &AttribACC, &TrainedATK,
 													&TrainedDEF, &TrainedCRI, &TrainedEVA, &TrainedACC,
@@ -124,6 +125,7 @@ func getPetUser(userarg string, ctx context) (pet, error) {
 	return *reqPet, nil
 }
 
+//Rolls imaginary dice to see if the attack hits.
 func doesHit(attacker pet, defender pet) (bool){
 	chanceToHit := attacker.EffectiveACC - defender.EffectiveEVA
 	
@@ -135,6 +137,7 @@ func doesHit(attacker pet, defender pet) (bool){
 	return false
 }
 
+//Rolls imaginary dice to see if the attack crit
 func doesCrit(attacker pet) (bool) {
 	critRand := float64(rand.Intn(100))
 	
@@ -145,4 +148,29 @@ func doesCrit(attacker pet) (bool) {
 	
 	return false
 	
+}
+
+
+//TODO: Report misses, crits, and damage
+func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
+	var winnerName, loserName discordgo.MessageEmbedField
+	var resultEmbed discordgo.MessageEmbed
+
+	//TODO: Get avatar URLs
+	//winnerThumb := discordgo.MessageEmbedThumbnail{URL: winner.PetUser.Avatar, ProxyURL:"", Width:0, Height:0}
+
+	embedAuthor := discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "http://wrigglebot.com/files/WriggleStandin.png"}
+
+	winnerName.Name = "Winner"
+	winnerName.Value = winner.PetUser.Username
+	winnerName.Inline = true
+	loserName.Name = "Loser"
+	loserName.Value	= loser.PetUser.Username
+	loserName.Inline = true
+
+	resultEmbed.Author = &embedAuthor
+	resultEmbed.Fields = []*discordgo.MessageEmbedField{&winnerName, &loserName}
+	resultEmbed.Color = 14030101
+
+	return &resultEmbed
 }
