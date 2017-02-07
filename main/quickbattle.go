@@ -157,9 +157,9 @@ func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
 	var resultEmbed discordgo.MessageEmbed
 
 	//TODO: Get avatar URLs
-	//winnerThumb := discordgo.MessageEmbedThumbnail{URL: winner.PetUser.Avatar, ProxyURL:"", Width:0, Height:0}
+	winnerThumb := discordgo.MessageEmbedThumbnail{URL: "https://discordapp.com/api/v6/users/" + winner.PetUser.ID + "/avatars/" + winner.PetUser.Avatar + ".jpg", ProxyURL:"", Width:0, Height:0}
 
-	embedAuthor := discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "http://wrigglebot.com/files/WriggleStandin.png"}
+	embedAuthor := discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "https://discordapp.com/api/v6/users/209739190244474881/avatars/47ada5c68c51f8dc2360143c0751d656.jpg"}
 
 	winnerName.Name = "Winner"
 	winnerName.Value = winner.PetUser.Username
@@ -169,6 +169,7 @@ func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
 	loserName.Inline = true
 
 	resultEmbed.Author = &embedAuthor
+	resultEmbed.Thumbnail = &winnerThumb
 	resultEmbed.Fields = []*discordgo.MessageEmbedField{&winnerName, &loserName}
 	resultEmbed.Color = 14030101
 
