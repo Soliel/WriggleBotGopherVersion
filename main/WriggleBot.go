@@ -179,7 +179,6 @@ func loadConfig(filename string) *config {
 
 
 func registerCommands() {
-	CmdHandler.register("test", testCommand)
 	CmdHandler.register("betatest", testCommandTwo)
 	CmdHandler.register("adopt", adoptUsers)
 	CmdHandler.register("quickbattle", quickBattle)

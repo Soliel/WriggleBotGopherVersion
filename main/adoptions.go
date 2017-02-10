@@ -1,5 +1,4 @@
 /*
-TODO: Implement a timeout for adoptions, and clear the user out of the map
 TODO: During user Selection check for adoption/adopting status
  */
 package main

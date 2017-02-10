@@ -46,7 +46,3 @@ func (handler commandHandler) register(name string, comman command) {
 		handler.Cmds[name[:1]] = comman
 	}
 }
-
-func testCommand(ctx context) {
-	_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "The Test has succeded.")
-}
