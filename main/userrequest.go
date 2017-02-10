@@ -22,8 +22,8 @@ type pet struct {
 	AttribDEF    int
 	AttribHP     int
 	AttribLCK    int
-	attribEVA    int
-	attribACC    int
+	AttribEVA    int
+	AttribACC    int
 	TrainedATK   int
 	TrainedDEF   int
 	TrainedCRI   int

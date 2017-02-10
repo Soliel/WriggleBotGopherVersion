@@ -123,6 +123,7 @@ func adoptUsers(ctx context) {
 		userReqLock.Lock()
 		reqUser, err := requestUserFromGuild(ctx.Session, ctx.Guild.ID, ctx.Args[0])
 		if err != nil {
+			userReqLock.Unlock()
 			return
 		}
 
