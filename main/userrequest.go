@@ -11,17 +11,17 @@ import (
 type pet struct {
 	PetUser      *discordgo.User
 	OwnerID      string
-	EffectiveATK float64, AttribATK    int
-	EffectiveDEF float64, AttribDEF    float64
-	EffectiveHP  float64, AttribHP     int
-	EffectiveCRI float64, AttribLCK    float64
-	DMGCount     float64, AttribEVA    int
-	EffectiveEVA int,     AttribACC    int
-	EffectiveACC int,     TrainedCRI   int
-	TrainedATK   int,     TrainedEVA   int
-	TrainedDEF   int,     TrainedACC   int
-	CritCount    int64,   MissCount    int64
-	Experience   int,     Level        int
+	EffectiveATK float64; AttribATK    float64
+	EffectiveDEF float64; AttribDEF    float64
+	EffectiveHP  float64; AttribHP     float64
+	EffectiveCRI float64; AttribLCK    float64
+	DMGCount     float64; AttribEVA    int
+	EffectiveEVA int;     AttribACC    int
+	EffectiveACC int;     TrainedCRI   float64
+	TrainedATK   float64; TrainedEVA   int
+	TrainedDEF   float64; TrainedACC   int
+	CritCount    int64;   MissCount    int64
+	Experience   int;     Level        int
 }
 
 //Called when requestUserFromGuild is called, it returns a guildMemberChunk asynchronously, uses a channel to return it's value back to it's requester.
@@ -68,7 +68,7 @@ func checkDuplicateOwners(ID string) (exists bool) {
 }
 
 //This helps get information from the database and constructs it into a 'Pet'
-func getPetUser(userarg string, ctx context) (pet, error) {
+func getPetUser(userid string, ctx context) (pet, error) {
 	reqPet := new(pet)
 	var (
 		AttribATK, AttribDEF, AttribHP, AttribLCK, 
@@ -77,14 +77,14 @@ func getPetUser(userarg string, ctx context) (pet, error) {
 		Level, Experience, AttribEVA, AttribACC, TrainedEVA, TrainedACC int
 	)
 
-	PetUser, err := ctx.Session.User(userarg)
+	PetUser, err := ctx.Session.User(userid)
 	reqPet.PetUser = PetUser
 
 	//if asking for a user by snowflake ID fails, request a user from the guild list.
 	if err != nil {
 		userReqLock.Lock()
 
-		reqPet.PetUser, err = requestUserFromGuild(ctx.Session, ctx.Guild.ID, userarg)
+		reqPet.PetUser, err = requestUserFromGuild(ctx.Session, ctx.Guild.ID, userid)
 		if err != nil {
 			_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "One of the Users could not be found")
 			userReqLock.Unlock()
@@ -107,7 +107,7 @@ func getPetUser(userarg string, ctx context) (pet, error) {
 	//Stand in math for effective stats
 	reqPet.EffectiveATK = AttribATK*(1+(0.2 * TrainedATK))
 	reqPet.EffectiveDEF = AttribDEF + TrainedDEF
-	reqPet.EffectiveHP  = AttribHP * (.0013 * TrainedDEF)
+	reqPet.EffectiveHP  = AttribHP * (1 + (.0013 * TrainedDEF))
 	reqPet.EffectiveCRI = (0.04*AttribLCK) + (0.08 * TrainedCRI)
 	reqPet.EffectiveEVA = AttribEVA + TrainedEVA
 	reqPet.EffectiveACC = AttribACC + TrainedACC

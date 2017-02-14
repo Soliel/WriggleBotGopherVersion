@@ -179,11 +179,7 @@ func loadConfig(filename string) *config {
 
 
 func registerCommands() {
-	CmdHandler.register("betatest", testCommandTwo)
 	CmdHandler.register("adopt", adoptUsers)
 	CmdHandler.register("quickbattle", quickBattle)
-}
-
-func testCommandTwo(ctx context) {
-	_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "The second test succeded.")
+	CmdHandler.register("train", trainStat)
 }

@@ -84,7 +84,7 @@ func doesHit(attacker *pet, defender pet) (bool){
 		return true
 	}
 	
-	fmt.Println(attacker.PetUser.Username, " miss!")
+	//fmt.Println(attacker.PetUser.Username, " miss!")
 	attacker.MissCount++
 	return false
 }
@@ -115,7 +115,7 @@ func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
 
 	winnerName.Name = "Winner"
 	winnerName.Value = winner.PetUser.Username
-	winnerName.Inline = true;
+	winnerName.Inline = true
 	
 	loserName.Name = "Loser"
 	loserName.Value = loser.PetUser.Username
