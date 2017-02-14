@@ -1,5 +1,5 @@
 /*
-TODO: During user Selection check for adoption/adopting status
+TODO: Switch all debugging messages into logrus or zap.
  */
 package main
 
@@ -12,13 +12,13 @@ import (
 func adoptUsers(ctx context) {
 
 	if len(ctx.Args) < 1 {
-		_, _ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You must specify a user to adopt.")
+		//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You must specify a user to adopt.")
 		return
 	}
 
 
 	if ctx.Args[0] == "decline" {
-		_, _ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You were not adopted.")
+		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You were not adopted.")
 		delete(AList, ctx.Msg.Author.ID)
  		return
 	}
@@ -30,7 +30,7 @@ func adoptUsers(ctx context) {
 
 		tx, err := DataStore.Begin()
 		if err != nil {
-			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Transaction could not be started, Adoption Aborted.")
+			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Transaction could not be started, Adoption Aborted.")
 			delete(AList, ctx.Msg.Author.ID)
 			fmt.Println(err)
 			return
@@ -39,7 +39,7 @@ func adoptUsers(ctx context) {
 
 		stmt, err := tx.Prepare("INSERT INTO pettable VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 		if err != nil {
-			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
+			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
 			delete(AList, ctx.Msg.Author.ID)
 			fmt.Println(err)
 			return
@@ -48,7 +48,7 @@ func adoptUsers(ctx context) {
 			
 		_, err = stmt.Exec(ctx.Msg.Author.ID, ctx.Msg.Author.Username, 1, 10, 10, 20, 1, 5, 80, 0, 0, 0, 0, 0, 0, AList[ctx.Msg.Author.ID].ID)
 		if err != nil {
-			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
+			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
 			delete(AList, ctx.Msg.Author.ID)
 			fmt.Println(err)
 			return
@@ -66,27 +66,27 @@ func adoptUsers(ctx context) {
 			
 			err = DataStore.QueryRow("SELECT PetAmount FROM ownertable WHERE UserID = ?", AList[ctx.Msg.Author.ID].ID).Scan(&petamnt)
 			if err != nil {
-				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "SQL Query failed to find Owner, adoption aborting.")
+				//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "SQL Query failed to find Owner, adoption aborting.")
 				return
 			}
 			
 			stmt, err = tx.Prepare("UPDATE ownertable SET PetAmount = ? WHERE UserID = ?")
 			if err != nil {
-				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
+				//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
 				return
 			}
 			
 			_, err := stmt.Exec(petamnt + 1, AList[ctx.Msg.Author.ID].ID)
 			if err != nil {
 				fmt.Println(err)
-				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
+				//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
 				return
 			}
 		}
 		
 		err = tx.Commit()
 		if err != nil {
-			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not commit changes to database, adoption aborted.")
+			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not commit changes to database, adoption aborted.")
 			delete(AList, ctx.Msg.Author.ID)
 			fmt.Println(err)
 			return

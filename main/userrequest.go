@@ -11,28 +11,17 @@ import (
 type pet struct {
 	PetUser      *discordgo.User
 	OwnerID      string
-	EffectiveATK float64
-	EffectiveDEF float64
-	EffectiveHP  float64
-	EffectiveCRI float64
-	DMGCount     float64
-	EffectiveEVA int
-	EffectiveACC int
-	AttribATK    int
-	AttribDEF    int
-	AttribHP     int
-	AttribLCK    int
-	AttribEVA    int
-	AttribACC    int
-	TrainedATK   int
-	TrainedDEF   int
-	TrainedCRI   int
-	TrainedEVA   int
-	TrainedACC   int
-	CritCount    int64
-	MissCount    int64
-	Experience   int
-	Level        int
+	EffectiveATK float64, AttribATK    int
+	EffectiveDEF float64, AttribDEF    float64
+	EffectiveHP  float64, AttribHP     int
+	EffectiveCRI float64, AttribLCK    float64
+	DMGCount     float64, AttribEVA    int
+	EffectiveEVA int,     AttribACC    int
+	EffectiveACC int,     TrainedCRI   int
+	TrainedATK   int,     TrainedEVA   int
+	TrainedDEF   int,     TrainedACC   int
+	CritCount    int64,   MissCount    int64
+	Experience   int,     Level        int
 }
 
 //Called when requestUserFromGuild is called, it returns a guildMemberChunk asynchronously, uses a channel to return it's value back to it's requester.
