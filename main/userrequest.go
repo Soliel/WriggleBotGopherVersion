@@ -69,33 +69,39 @@ func checkDuplicateOwners(ID string) (exists bool) {
 
 //This helps get information from the database and constructs it into a 'Pet'
 func getPetUser(userid string, ctx context) (pet, error) {
+
+	PetUser, err := ctx.Session.User(userid)
+	reqPet, err := getPetFromDB(userid)
+
+	//if asking for a user by snowflake ID fails, request a user from the guild list.
+	if err != nil {
+		userReqLock.Lock()	
+		petUser, err = requestUserFromGuild(ctx.Session, ctx.Guild.ID, userid)
+		if err != nil {
+			_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "One of the Users could not be found")
+			userReqLock.Unlock()
+			return *reqPet, err
+		}
+		reqPet, err = getPetFromDB(PetUser.ID)
+		userReqLock.Unlock()
+	}
+	
+	reqPet.PetUser = PetUser
+	return *reqPet, nil
+}
+
+func getPetFromDB(petID string) (pet, error) {
 	reqPet := new(pet)
+	
 	var (
 		AttribATK, AttribDEF, AttribHP, AttribLCK, 
 		TrainedATK, TrainedDEF, TrainedCRI float64
 		OwnerID, PetID, PetName string
 		Level, Experience, AttribEVA, AttribACC, TrainedEVA, TrainedACC int
 	)
-
-	PetUser, err := ctx.Session.User(userid)
-	reqPet.PetUser = PetUser
-
-	//if asking for a user by snowflake ID fails, request a user from the guild list.
-	if err != nil {
-		userReqLock.Lock()
-
-		reqPet.PetUser, err = requestUserFromGuild(ctx.Session, ctx.Guild.ID, userid)
-		if err != nil {
-			_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "One of the Users could not be found")
-			userReqLock.Unlock()
-			return *reqPet, err
-		}
-
-		userReqLock.Unlock()
-	}
-
+	
 	//Grab the pet from the database based on userID
-	err = DataStore.QueryRow("SELECT * FROM pettable WHERE UserID = ?", reqPet.PetUser.ID).Scan(&PetID , &PetName, &Level, &AttribATK, &AttribDEF, &AttribHP,
+	err = DataStore.QueryRow("SELECT * FROM pettable WHERE UserID = ?", petID).Scan(&PetID , &PetName, &Level, &AttribATK, &AttribDEF, &AttribHP,
 													&AttribLCK, &AttribEVA, &AttribACC, &TrainedATK,
 													&TrainedDEF, &TrainedCRI, &TrainedEVA, &TrainedACC,
 													&Experience, &OwnerID)
@@ -125,6 +131,6 @@ func getPetUser(userid string, ctx context) (pet, error) {
 	reqPet.OwnerID      = OwnerID
 	reqPet.Experience   = Experience
 	reqPet.Level        = Level
-
+	
 	return *reqPet, nil
 }

@@ -57,11 +57,11 @@ func trainStat(ctx context) {
 
 	petStatMap := map[string]float64{
 		"attack":   petUser.TrainedATK, "atk": petUser.TrainedATK,
-	  	"defense":  petUser.TrainedDEF, "def": petUser.TrainedDEF,
-	  	"evasion":  float64(petUser.TrainedEVA), "eva": float64(petUser.TrainedEVA),
-	  	"accuracy": float64(petUser.TrainedACC), "acc": float64(petUser.TrainedACC),
-	  	"crit":     petUser.TrainedCRI, "cri": petUser.TrainedCRI,
-  	}
+		"defense":  petUser.TrainedDEF, "def": petUser.TrainedDEF,
+		"evasion":  float64(petUser.TrainedEVA), "eva": float64(petUser.TrainedEVA),
+		"accuracy": float64(petUser.TrainedACC), "acc": float64(petUser.TrainedACC),
+		"crit":     petUser.TrainedCRI, "cri": petUser.TrainedCRI,
+  }
 
 	statMap := map[string]string {
 		"attack":   "TrainedATK", "atk": "TrainedATK",
@@ -92,12 +92,71 @@ func trainStat(ctx context) {
 	defer stmt.Close()
 
 
-
-	//TODO: Write a function for time waited.
-	//Function should match this:
-	//Exponential formula that starts at 15 at x = 0 and ends at 86400 at x = 200
+	//Crazy math...
 	trainingDuration := time.Second * time.Duration(math.Pow(1.058473, petStatMap[ctx.Args[1]]) + 14.00)
 	trainingCompletion := time.Now().Add(trainingDuration)
 
-	stmt.Exec(statMap[ctx.Args[1]], petUser.PetUser.ID, trainingCompletion.Format(time.RFC822))
+	_, err = stmt.Exec(statMap[ctx.Args[1]], petUser.PetUser.ID, trainingCompletion.Format(time.RFC822))
+	if err != nil {
+		return
+	}
+	
+	err = tx.Commit()
+	if err != nil {
+		return
+	}
+	
+	ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Training has begun!")
+}
+
+//This function does all the work for the training timer. 
+//call this in main as a goroutine.
+func startTicker() {
+	trainingMap := make(map[time.Time]training)
+	
+	type training struct {
+		TPet pet
+		StatArg string
+	}
+	
+	rows, err := DataStore.Query("SELECT * FROM trainingtbl")
+	if err.Error() == "sql: no rows in result set" {
+		//Nothing to load!
+	} else if err != nil {
+		return
+	}
+	
+	for rows.Next() {
+		var strtime, stat, petID string
+		rows.Scan(&petID, &stat, &strtime)
+		tPet := getPetFromDB(petID)
+		if err != nil {
+			continue
+		}
+		trainingTask := training{TPet: tPet, StatArg: stat}
+		trainingMap[time.Parse(time.RFC822, strtime)] = trainingTask
+	}
+	
+	for key, value := range trainingMap {
+		if time.Now().Sub(key) >= 0 {
+			
+		}
+	}
+	
+	
+	for {
+		select {
+			case time :=  <- tTick.C :
+				fmt.Println(time)
+				i++
+				if i >= 30 {
+					tTick.Stop()
+					stop <- true
+				}
+			case <- stop :
+				fmt.Println("Timer stopped.")
+				stop <- true
+				return
+		}
+	}
 }
