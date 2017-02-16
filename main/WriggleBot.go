@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"sync"
+	"time"
 )
 
 //Setting global variables and giving DB a global scope.
@@ -26,6 +27,8 @@ var (
 	MemChan    chan *discordgo.User
 	AList      map[string]*discordgo.User
 	userReqLock = &sync.Mutex{}
+	tTick      *time.Ticker
+	trainingMap map[time.Time]training
 )
 
 type config struct {
@@ -98,6 +101,9 @@ func main() {
 	if err != nil {
 		fmt.Println("Error opening connection with Discord, ", err)
 	}
+
+	tTick = time.NewTicker(time.Second)
+	go startTickReceiver()
 
 	fmt.Println("Bot is now running as user: ", u.Username)
 

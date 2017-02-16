@@ -37,16 +37,16 @@ func adoptUsers(ctx context) {
 		}
 		defer tx.Rollback()
 
-		stmt, err := tx.Prepare("INSERT INTO pettable VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+		/*stmt, err := tx.Prepare()
 		if err != nil {
 			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
 			delete(AList, ctx.Msg.Author.ID)
 			fmt.Println(err)
 			return
 		}
-		defer stmt.Close()
+		defer stmt.Close()*/
 			
-		_, err = stmt.Exec(ctx.Msg.Author.ID, ctx.Msg.Author.Username, 1, 10, 10, 20, 1, 5, 80, 0, 0, 0, 0, 0, 0, AList[ctx.Msg.Author.ID].ID)
+		_, err = tx.Exec("INSERT INTO pettable VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", ctx.Msg.Author.ID, ctx.Msg.Author.Username, 1, 10, 10, 20, 1, 5, 80, 0, 0, 0, 0, 0, 0, AList[ctx.Msg.Author.ID].ID)
 		if err != nil {
 			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
 			delete(AList, ctx.Msg.Author.ID)
@@ -56,8 +56,8 @@ func adoptUsers(ctx context) {
 			
 		dupOwn := checkDuplicateOwners(AList[ctx.Msg.Author.ID].ID)
 		if !dupOwn {
-			stmt, _ = tx.Prepare("INSERT INTO ownertable VALUES(?,?,?,?)")
-			stmt.Exec(AList[ctx.Msg.Author.ID].ID, AList[ctx.Msg.Author.ID].Username, 1, 1)
+			//stmt, _ = tx.Prepare()
+			tx.Exec("INSERT INTO ownertable VALUES(?,?,?,?)", AList[ctx.Msg.Author.ID].ID, AList[ctx.Msg.Author.ID].Username, 1, 1)
 		}
 			
 		if dupOwn {
@@ -70,13 +70,13 @@ func adoptUsers(ctx context) {
 				return
 			}
 			
-			stmt, err = tx.Prepare("UPDATE ownertable SET PetAmount = ? WHERE UserID = ?")
+			/*stmt, err = tx.Prepare()
 			if err != nil {
 				//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
 				return
-			}
+			}*/
 			
-			_, err := stmt.Exec(petamnt + 1, AList[ctx.Msg.Author.ID].ID)
+			_, err := tx.Exec("UPDATE ownertable SET PetAmount = ? WHERE UserID = ?", petamnt + 1, AList[ctx.Msg.Author.ID].ID)
 			if err != nil {
 				fmt.Println(err)
 				//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
@@ -100,47 +100,42 @@ func adoptUsers(ctx context) {
 	if strings.HasPrefix(ctx.Args[0], "<@") {
 		ctx.Args[0] = strings.Trim(ctx.Args[0], "<@>")
 	}
-	
-	//Search for user by ID in case they entered one.
-	reqUser, err := ctx.Session.User(ctx.Args[0])
-	if err == nil {
-		dupErr := checkDuplicatePets(reqUser.ID)
-		if dupErr != nil {
-			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, dupErr.Error())
-			return
-		}
-		AList[reqUser.ID] = ctx.Msg.Author
-		go timeoutAdoption(reqUser.ID)
-		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, reqUser.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
-	}
-	
-	//Start a query for the user, Causes Guild Member Chunk event to fire. 
+
+
+	//Start a query for the user, Causes Guild Member Chunk event to fire
+	//We lock the function with UserReqLock to ensure it is the only one being requested.
+	userReqLock.Lock()
+	reqUser, err := requestUserFromGuild(ctx.Session, ctx.Guild.ID, ctx.Args[0])
 	if err != nil {
-		fmt.Println("User could not be parsed with ID, showing error, ", err)
-		fmt.Println("Attempting to locate user by name")
-
-		//We lock the function with UserReqLock to ensure it is the only one being requested.
-		userReqLock.Lock()
-		reqUser, err := requestUserFromGuild(ctx.Session, ctx.Guild.ID, ctx.Args[0])
-		if err != nil {
+		reqUser, err := ctx.Session.User(ctx.Args[0])
+		if err == nil {
 			userReqLock.Unlock()
-			return
+			dupErr := checkDuplicatePets(reqUser.ID)
+			if dupErr != nil {
+				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, dupErr.Error())
+				return
+			}
+			AList[reqUser.ID] = ctx.Msg.Author
+			go timeoutAdoption(reqUser.ID)
+			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, reqUser.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
+			return 
 		}
-
-		dupErr := checkDuplicatePets(reqUser.ID)
-		if dupErr != nil {
-			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, dupErr.Error())
-			userReqLock.Unlock()
-			return
-		}
-
-		AList[reqUser.ID] = ctx.Msg.Author
-		go timeoutAdoption(reqUser.ID)
 		userReqLock.Unlock()
-
-		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, reqUser.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
 		return
 	}
+
+	dupErr := checkDuplicatePets(reqUser.ID)
+	if dupErr != nil {
+		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, dupErr.Error())
+		userReqLock.Unlock()
+		return
+	}
+
+	AList[reqUser.ID] = ctx.Msg.Author
+	go timeoutAdoption(reqUser.ID)
+	userReqLock.Unlock()
+
+	ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, reqUser.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
 	return
 }
 

@@ -9,8 +9,9 @@ import (
 
 //Defines a pet, lots of information
 type pet struct {
-	PetUser      *discordgo.User
-	OwnerID      string
+	//PetUser      *discordgo.User
+	Username     string;  OwnerID      string
+	Avatar       string;  ID           string
 	EffectiveATK float64; AttribATK    float64
 	EffectiveDEF float64; AttribDEF    float64
 	EffectiveHP  float64; AttribHP     float64
@@ -70,24 +71,25 @@ func checkDuplicateOwners(ID string) (exists bool) {
 //This helps get information from the database and constructs it into a 'Pet'
 func getPetUser(userid string, ctx context) (pet, error) {
 
-	PetUser, err := ctx.Session.User(userid)
-	reqPet, err := getPetFromDB(userid)
+	var PetUser *discordgo.User
+	var reqPet  pet
 
-	//if asking for a user by snowflake ID fails, request a user from the guild list.
+	userReqLock.Lock()
+	PetUser, err := requestUserFromGuild(ctx.Session, ctx.Guild.ID, userid)
 	if err != nil {
-		userReqLock.Lock()	
-		petUser, err = requestUserFromGuild(ctx.Session, ctx.Guild.ID, userid)
-		if err != nil {
-			_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "One of the Users could not be found")
-			userReqLock.Unlock()
-			return *reqPet, err
-		}
-		reqPet, err = getPetFromDB(PetUser.ID)
+		_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "One of the Users could not be found")
 		userReqLock.Unlock()
+		return reqPet, err
 	}
-	
-	reqPet.PetUser = PetUser
-	return *reqPet, nil
+
+	userReqLock.Unlock()
+	reqPet, err = getPetFromDB(PetUser.ID)
+
+	reqPet.Username = PetUser.Username
+	reqPet.Avatar   = PetUser.Avatar
+	reqPet.ID       = PetUser.ID
+
+	return reqPet, nil
 }
 
 func getPetFromDB(petID string) (pet, error) {
@@ -99,9 +101,9 @@ func getPetFromDB(petID string) (pet, error) {
 		OwnerID, PetID, PetName string
 		Level, Experience, AttribEVA, AttribACC, TrainedEVA, TrainedACC int
 	)
-	
+
 	//Grab the pet from the database based on userID
-	err = DataStore.QueryRow("SELECT * FROM pettable WHERE UserID = ?", petID).Scan(&PetID , &PetName, &Level, &AttribATK, &AttribDEF, &AttribHP,
+	err := DataStore.QueryRow("SELECT * FROM pettable WHERE UserID = ?", petID).Scan(&PetID , &PetName, &Level, &AttribATK, &AttribDEF, &AttribHP,
 													&AttribLCK, &AttribEVA, &AttribACC, &TrainedATK,
 													&TrainedDEF, &TrainedCRI, &TrainedEVA, &TrainedACC,
 													&Experience, &OwnerID)

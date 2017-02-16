@@ -1,7 +1,7 @@
 package main
 
 import(
-	"fmt"
+
 	"github.com/bwmarrin/discordgo"
 	"math/rand"
 	"strconv"
@@ -9,7 +9,6 @@ import(
 
 //Entry point for the "quickbattle" or "q" command
 func quickBattle(ctx context) {
-	
 	//Verify that we have enough args
 	if len(ctx.Args) < 2 {
 		return
@@ -29,7 +28,6 @@ func quickBattle(ctx context) {
 	if err != nil {
 		return
 	}
-	
 	//check if ally is owned by the command initiator
 	if allypet.OwnerID != ctx.Msg.Author.ID {
 		return
@@ -94,7 +92,7 @@ func doesCrit(attacker *pet) (bool) {
 	critRand := float64(rand.Intn(100))
 	
 	if critRand < attacker.EffectiveCRI {
-		fmt.Println(attacker.PetUser.Username, " rolled a", critRand, " crit!")
+		//fmt.Println(attacker.PetUser.Username, " rolled a", critRand, " crit!")
 		attacker.CritCount++
 		return true
 	}
@@ -109,39 +107,39 @@ func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
 	var winnerName, loserName, winnerMissCount, winnerCritCount, winnerDamageCount, loserMissCount, loserCritCount, loserDamageCount discordgo.MessageEmbedField
 	var resultEmbed discordgo.MessageEmbed
 
-	winnerThumb := discordgo.MessageEmbedThumbnail{URL: "https://discordapp.com/api/v6/users/" + winner.PetUser.ID + "/avatars/" + winner.PetUser.Avatar + ".jpg", ProxyURL:"", Width:0, Height:0}
+	winnerThumb := discordgo.MessageEmbedThumbnail{URL: "https://discordapp.com/api/v6/users/" + winner.ID + "/avatars/" + winner.Avatar + ".jpg", ProxyURL:"", Width:0, Height:0}
 
 	embedAuthor := discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "https://discordapp.com/api/v6/users/209739190244474881/avatars/47ada5c68c51f8dc2360143c0751d656.jpg"}
 
 	winnerName.Name = "Winner"
-	winnerName.Value = winner.PetUser.Username
+	winnerName.Value = winner.Username
 	winnerName.Inline = true
 	
 	loserName.Name = "Loser"
-	loserName.Value = loser.PetUser.Username
+	loserName.Value = loser.Username
 	loserName.Inline = true
 	
-	winnerMissCount.Name = winner.PetUser.Username + " misses"
+	winnerMissCount.Name = winner.Username + " misses"
 	winnerMissCount.Value = strconv.FormatInt(winner.MissCount, 10)
 	winnerMissCount.Inline = true
 	
-	loserMissCount.Name = loser.PetUser.Username  + " misses"
+	loserMissCount.Name = loser.Username  + " misses"
 	loserMissCount.Value = strconv.FormatInt(loser.MissCount, 10)
 	loserMissCount.Inline = true
 	
-	winnerCritCount.Name = winner.PetUser.Username + " crits"
+	winnerCritCount.Name = winner.Username + " crits"
 	winnerCritCount.Value = strconv.FormatInt(winner.CritCount, 10)
 	winnerCritCount.Inline = true
 	
-	loserCritCount.Name = loser.PetUser.Username  + " crits"
+	loserCritCount.Name = loser.Username  + " crits"
 	loserCritCount.Value = strconv.FormatInt(loser.CritCount, 10)
 	loserCritCount.Inline = true
 	
-	winnerDamageCount.Name = winner.PetUser.Username + " damage dealt"
+	winnerDamageCount.Name = winner.Username + " damage dealt"
 	winnerDamageCount.Value = strconv.FormatFloat(winner.DMGCount, 'f', 2, 64)
 	winnerDamageCount.Inline = true
 	
-	loserDamageCount.Name = loser.PetUser.Username + " damage dealt"
+	loserDamageCount.Name = loser.Username + " damage dealt"
 	loserDamageCount.Value = strconv.FormatFloat(loser.DMGCount, 'f', 2, 64)
 	loserDamageCount.Inline = true
 
