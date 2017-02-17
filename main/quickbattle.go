@@ -6,6 +6,7 @@ import(
 	"math/rand"
 	"strconv"
 	"math"
+	"errors"
 )
 
 //Entry point for the "quickbattle" or "q" command
@@ -155,6 +156,7 @@ func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
 	loserDamageCount.Value = strconv.FormatFloat(loser.DMGCount, 'f', 2, 64)
 	loserDamageCount.Inline = true
 
+	resultEmbed.Title  = "Battle Results"
 	resultEmbed.Author = &embedAuthor
 	resultEmbed.Thumbnail = &winnerThumb
 	resultEmbed.Fields = []*discordgo.MessageEmbedField{&winnerName, &loserName, &winnerMissCount, &loserMissCount, &winnerCritCount, &loserCritCount, &winnerDamageCount, &loserDamageCount}
@@ -170,6 +172,7 @@ func calcExperience(defender pet) [2]float64 {
 	return [2]float64{winner_exp, loser_exp}
 }
 
+//The super get everything done that has to do with leveling method. 
 func getLevels(attacker *pet, defender *pet, won bool, ctx context) {
 	exp := calcExperience(*defender)
 	aLevelReq := 10.00 * math.Pow(float64(attacker.Level), 1.2)
@@ -239,4 +242,23 @@ func levelPM(leveledPet pet, ctx context) {
 	}
 
 	ctx.Session.ChannelMessageSend(pmChannel.ID, "Your pet, " + leveledPet.Username + " Has leveled up to: " + strconv.FormatInt(int64(leveledPet.Level), 10))
+}
+
+//This function will apply all the necessary levelup data to a pet
+func doPetLevelUp(upPet pet) (error){
+  	tx, err := DataStore.Begin()
+  	if err != nil {
+    		//TODO: Implement a backup levelup, maybe to call this function later.
+    		return errors.New("Unable to do levelup.")
+  	}
+  	defer tx.Rollback()
+
+  	_, err = tx.Exec("UPDATE pettable SET Level = ?, AttribATK = ?, AttribDEF = ?, AttribHP = ?, AttribLCK = ? WHERE UserID = ?", upPet.Level, upPet.AttribATK + 2, upPet.AttribDEF + 0.25, upPet.AttribHP + 10, upPet.AttribLCK + 0.25, upPet.ID)
+  	if err != nil {
+    		//TODO: Implement backup levelup, maybe to call this function later.
+    		return errors.New("Unable to do levelup.")
+  	}
+
+	tx.Commit()
+	return nil
 }

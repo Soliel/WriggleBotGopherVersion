@@ -16,24 +16,19 @@ Level Requirement = 10 * (level ^ 1.2)
 */
 package main
 
-import "errors"
 
-//This function will apply all the necessary levelup data to a pet
-func doPetLevelUp(upPet pet) (error){
-  	tx, err := DataStore.Begin()
-  	if err != nil {
-    		//TODO: Implement a backup levelup, maybe to call this function later.
-    		return errors.New("Unable to do levelup.")
-  	}
-  	defer tx.Rollback()
-
-  	_, err = tx.Exec("UPDATE pettable SET Level = ?, AttribATK = ?, AttribDEF = ?, AttribHP = ?, AttribLCK = ? WHERE UserID = ?", upPet.Level, upPet.AttribATK + 2, upPet.AttribDEF + 0.25, upPet.AttribHP + 10, upPet.AttribLCK + 0.25, upPet.ID)
-  	if err != nil {
-    		//TODO: Implement backup levelup, maybe to call this function later.
-    		return errors.New("Unable to do levelup.")
-  	}
-
-	tx.Commit()
-	return nil
+func petStatSheet (ctx context) {
+	if  len(ctx.Args) < 1 {
+		return
+	}
+	
+	reqPet, err := getPetUser(ctx.Args[0])
+	if err != nil {
+		return
+	}
+	
+	embed := *discordgo.MessageEmbed{
+		Title: reqPet.Username + "'s stat sheet"
+		Color: 14030101
+	}
 }
-
