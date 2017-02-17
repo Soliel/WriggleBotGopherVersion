@@ -185,8 +185,9 @@ func loadConfig(filename string) *config {
 
 
 func registerCommands() {
-	CmdHandler.register("adopt", adoptUsers)
+	CmdHandler.register("adopt",       adoptUsers)
 	CmdHandler.register("quickbattle", quickBattle)
-	CmdHandler.register("train", trainStat)
+	CmdHandler.register("train",       trainStat)
+	CmdHandler.register("pets",        listPets)
 	//CmdHandler.register("showalist", showAdoptions)
 }

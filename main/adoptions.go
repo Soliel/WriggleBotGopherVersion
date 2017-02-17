@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"bytes"
+	"github.com/bwmarrin/discordgo"
 )
 
 func adoptUsers(ctx context) {
@@ -58,7 +59,7 @@ func adoptUsers(ctx context) {
 		dupOwn := checkDuplicateOwners(AList[ctx.Msg.Author.ID].ID)
 		if !dupOwn {
 			//stmt, _ = tx.Prepare()
-			tx.Exec("INSERT INTO ownertable VALUES(?,?,?,?)", AList[ctx.Msg.Author.ID].ID, AList[ctx.Msg.Author.ID].Username, 1, 1)
+			tx.Exec("INSERT INTO ownertable VALUES(?,?,?)", AList[ctx.Msg.Author.ID].ID, AList[ctx.Msg.Author.ID].Username, 1)
 		}
 			
 		if dupOwn {
@@ -146,6 +147,35 @@ func timeoutAdoption(key string) {
 	fmt.Println("No response in 15 seconds, adoption aborting.")
 	delete(AList, key)
 	return
+}
+
+func listPets(ctx context) {
+	rows, err := DataStore.Query("SELECT FriendlyName FROM pettable WHERE OwnerID = ?", ctx.Msg.Author.ID)
+	if err != nil {
+		return
+	}
+
+	var buffer bytes.Buffer
+
+	for rows.Next() {
+		var petName string
+		rows.Scan(&petName)
+		if err != nil {
+			continue
+		}
+		buffer.WriteString("\n" + petName)
+	}
+
+	var listEmbed discordgo.MessageEmbed
+
+	embedAuthor := discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "https://discordapp.com/api/v6/users/209739190244474881/avatars/47ada5c68c51f8dc2360143c0751d656.jpg"}
+	petList     := discordgo.MessageEmbedField{Name: ctx.Msg.Author.Username + "'s pets", Value: buffer.String(), Inline: true}
+
+	listEmbed.Author = &embedAuthor
+	listEmbed.Color  = 14030101
+	listEmbed.Fields = []*discordgo.MessageEmbedField{&petList}
+
+	ctx.Session.ChannelMessageSendEmbed(ctx.Msg.ChannelID, &listEmbed)
 }
 
 func showAdoptions(ctx context) {

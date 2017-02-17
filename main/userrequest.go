@@ -9,7 +9,6 @@ import (
 
 //Defines a pet, lots of information
 type pet struct {
-	//PetUser      *discordgo.User
 	Training     bool
 	Username     string;  OwnerID      string
 	Avatar       string;  ID           string
@@ -23,14 +22,14 @@ type pet struct {
 	TrainedATK   float64; TrainedEVA   int
 	TrainedDEF   float64; TrainedACC   int
 	CritCount    int64;   MissCount    int64
-	Experience   int;     Level        int
+	Experience   float64; Level        int
 }
 
 type owner struct {
-	ID       string
-	Username string
-	Level    int
-	PetAmnt  int
+	ID        string
+	Username  string
+	Level     int
+	PetAmount int
 }
 
 //Called when requestUserFromGuild is called, it returns a guildMemberChunk asynchronously, uses a channel to return it's value back to it's requester.
@@ -105,9 +104,9 @@ func getPetFromDB(petID string) (pet, error) {
 	
 	var (
 		AttribATK, AttribDEF, AttribHP, AttribLCK, 
-		TrainedATK, TrainedDEF, TrainedCRI float64
+		TrainedATK, TrainedDEF, TrainedCRI, Experience float64
 		OwnerID, PetID, PetName string
-		Level, Experience, AttribEVA, AttribACC, TrainedEVA, TrainedACC int
+		Level,AttribEVA, AttribACC, TrainedEVA, TrainedACC int
 		Training bool
 	)
 
@@ -147,14 +146,19 @@ func getPetFromDB(petID string) (pet, error) {
 	return *reqPet, nil
 }
 
-getOwnerFromDB(OwnerID string) {
+func getOwnerFromDB(OwnerID string) (owner, error) {
 	var(
-		ID, Username   string
-		Level, PetAmnt int
+		ID, Username     string
+		Level, PetAmount int
 	)
+
+	var reqOwner owner
 	
-	err ;= DataStore.QueryRow("SELECT * FROM ownertable WHERE UserID = ?", OwnerID).Scan(&ID, &Username, &Level, &PetAmnt)
-	
-	
-	
+	err := DataStore.QueryRow("SELECT * FROM ownertable WHERE UserID = ?", OwnerID).Scan(&ID, &Username, &Level, &PetAmount)
+
+	if err != nil{
+		return reqOwner, err
+	}
+
+	return owner{ID: ID, Username: Username, Level: Level, PetAmount: PetAmount}, nil
 }

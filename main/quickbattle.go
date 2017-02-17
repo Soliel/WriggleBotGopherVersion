@@ -5,6 +5,7 @@ import(
 	"github.com/bwmarrin/discordgo"
 	"math/rand"
 	"strconv"
+	"math"
 )
 
 //Entry point for the "quickbattle" or "q" command
@@ -14,9 +15,6 @@ func quickBattle(ctx context) {
 		return
 	}
 
-	//initialize pet objects to store information
-	var allypet, enemypet pet
-
 	//fill up the ally user with the information from the database
 	allypet, err := getPetUser(ctx.Args[0], ctx)
 	if err != nil {
@@ -24,15 +22,16 @@ func quickBattle(ctx context) {
 	}
 
 	//fill up the enemy user
-	enemypet, err = getPetUser(ctx.Args[1], ctx)
+	enemypet, err := getPetUser(ctx.Args[1], ctx)
 	if err != nil {
 		return
 	}
 	//check if ally is owned by the command initiator
+
 	if allypet.OwnerID != ctx.Msg.Author.ID {
 		return
 	}
-	
+
 	if allypet.Training {
 		return
 	}
@@ -50,6 +49,9 @@ func quickBattle(ctx context) {
 		if allypet.EffectiveHP <= 0 {
 			_,_ = ctx.Session.ChannelMessageSendEmbed(ctx.Msg.ChannelID, createResultEmbed(enemypet, allypet))
 			doingBattle = false
+
+			getLevels(&allypet, &enemypet, false, ctx)
+
 			return
 		}
 		
@@ -62,6 +64,8 @@ func quickBattle(ctx context) {
 		if enemypet.EffectiveHP <= 0 {
 			_,_ = ctx.Session.ChannelMessageSendEmbed(ctx.Msg.ChannelID, createResultEmbed(allypet, enemypet))
 			doingBattle = false
+
+			getLevels(&allypet, &enemypet, true, ctx)
 			return
 		}
 			
@@ -160,6 +164,79 @@ func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
 }
 
 
-func calcExperience(winner pet, loser pet, owner string) [3]float64 {
-	
+func calcExperience(defender pet) [2]float64 {
+	winner_exp := (10.00 * (math.Pow(float64(defender.Level), 1.2)))/((math.Pow(float64(defender.Level), .1162)) + 1.00)
+	loser_exp  := winner_exp/2.00
+	return [2]float64{winner_exp, loser_exp}
+}
+
+func getLevels(attacker *pet, defender *pet, won bool, ctx context) {
+	exp := calcExperience(*defender)
+	aLevelReq := 10.00 * math.Pow(float64(attacker.Level), 1.2)
+	dLevelReq := 10.00 * math.Pow(float64(defender.Level), 1.2)
+
+	if won {
+		attacker.Experience += exp[0]
+		defender.Experience += exp[1]
+	} else {
+		attacker.Experience += exp[1]
+		defender.Experience += exp[0]
+	}
+
+	if attacker.Experience >= aLevelReq {
+		attacker.Experience -= aLevelReq
+		attacker.Level += 1
+		err := doPetLevelUp(*attacker)
+		if err != nil {
+			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Result storage failed, battle will not be counted.")
+			return
+		}
+		levelPM(*attacker, ctx)
+	}
+
+	if defender.Experience >= dLevelReq {
+		defender.Experience -= dLevelReq
+		defender.Level += 1
+		err := doPetLevelUp(*defender)
+		if err != nil {
+			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Result storage failed, battle will not be counted.")
+			return
+		}
+		levelPM(*defender, ctx)
+	}
+
+	tx, err := DataStore.Begin()
+	if err != nil {
+		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Result storage failed, battle will not be counted.")
+		return
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("UPDATE pettable SET Experience = ? WHERE UserID = ?")
+	if err != nil {
+		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Result storage failed, battle will not be counted.")
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(attacker.Experience, attacker.ID)
+	if err != nil {
+		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Result storage failed, battle will not be counted.")
+	}
+
+	_, err = stmt.Exec(defender.Experience, defender.ID)
+	if err != nil {
+		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Result storage failed, battle will not be counted.")
+	}
+
+	tx.Commit()
+	return
+}
+
+func levelPM(leveledPet pet, ctx context) {
+	pmChannel, err := ctx.Session.UserChannelCreate(leveledPet.OwnerID)
+	if err != nil {
+		return
+	}
+
+	ctx.Session.ChannelMessageSend(pmChannel.ID, "Your pet, " + leveledPet.Username + " Has leveled up to: " + strconv.FormatInt(int64(leveledPet.Level), 10))
 }
