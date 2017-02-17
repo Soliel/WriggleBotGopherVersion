@@ -6,6 +6,11 @@ import (
 	"math"
 )
 
+type training struct {
+	TPet    string
+	StatArg string
+	newNum  float64
+}
 
 //This will be used by Owners to "Train" their pets. This method should lower desire for self battles
 //Command will be invoked by "wrig train <pet> <stat>, Training makes this more of a facebook game."
@@ -14,6 +19,14 @@ func trainStat(ctx context) {
 	petUser, err := getPetUser(ctx.Args[0], ctx)
 	if err != nil {
 		fmt.Println(err)
+		return
+	}
+	
+	if petUser.OwnerID != ctx.Msg.Author.ID {
+		return
+	}
+	
+	if petUser.Training { 
 		return
 	}
 
@@ -53,7 +66,13 @@ func trainStat(ctx context) {
 	trainingCompletion := time.Now().Add(trainingDuration)
 
 
-	_, err = tx.Exec("INSERT INTO trainingtbl VALUES(?,?,?)", petUser.ID, statMap[ctx.Args[1]], trainingCompletion.Format(time.RFC822))
+	_, err = tx.Exec("INSERT INTO trainingtbl VALUES(?,?,?, ?)", petUser.ID, statMap[ctx.Args[1]], trainingCompletion.Format(time.RFC822), petStatMap[ctx.Args[1]] + 1)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	
+	_, err = tx.Exec("UPDATE pettable SET Training = TRUE WHERE UserID = ?", petUser.ID)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -91,11 +110,12 @@ func startTickReceiver() {
 	//Loading our database into the function
 	for rows.Next() {
 		var strtime, stat, petID string
-		rows.Scan(&petID, &stat, &strtime)
+		var newnum float64
+		rows.Scan(&petID, &stat, &strtime, &newnum)
 		if err != nil {
 			continue
 		}
-		trainingTask := training{TPet: petID, StatArg: stat}
+		trainingTask := training{TPet: petID, StatArg: stat, newNum: newnum}
 		t, _ := time.Parse(time.RFC822, strtime)
 		trainingMap[t] = trainingTask
 	}
@@ -105,7 +125,7 @@ func startTickReceiver() {
 		for key, value := range trainingMap {
 			if tick.Sub(key) >= 0 {
 
-				_, err = DataStore.Exec("UPDATE pettable SET " + value.StatArg + " = ? WHERE UserID = ?", value.newNum, value.TPet)
+				_, err = DataStore.Exec("UPDATE pettable SET " + value.StatArg + " = ?, Training = FALSE WHERE UserID = ?", value.newNum, value.TPet)
 				if err != nil {
 					fmt.Println(err)
 					go startTickReceiver()

@@ -32,6 +32,14 @@ func quickBattle(ctx context) {
 	if allypet.OwnerID != ctx.Msg.Author.ID {
 		return
 	}
+	
+	if allypet.Training {
+		return
+	}
+	
+	if enemypet.Training {
+		return
+	}
 
 	//Set the battling flag
 	doingBattle := true
@@ -149,4 +157,9 @@ func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
 	resultEmbed.Color = 14030101
 
 	return &resultEmbed
+}
+
+
+func calcExperience(winner pet, loser pet, owner string) [3]float64 {
+	
 }

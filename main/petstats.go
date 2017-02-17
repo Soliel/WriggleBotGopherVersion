@@ -16,13 +16,6 @@ Level Requirement = 10 * (level ^ 1.2)
 */
 package main
 
-
-type training struct {
-	TPet    string
-	StatArg string
-	newNum  float64
-}
-
 //This function will apply all the neccesary levelup data to a pet
 func DoPetLevelUp(upPet pet) {
   	tx, err := DataStore.Begin()

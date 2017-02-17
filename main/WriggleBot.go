@@ -188,4 +188,5 @@ func registerCommands() {
 	CmdHandler.register("adopt", adoptUsers)
 	CmdHandler.register("quickbattle", quickBattle)
 	CmdHandler.register("train", trainStat)
+	//CmdHandler.register("showalist", showAdoptions)
 }

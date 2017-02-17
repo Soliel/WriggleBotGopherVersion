@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"bytes"
 )
 
 func adoptUsers(ctx context) {
@@ -46,7 +47,7 @@ func adoptUsers(ctx context) {
 		}
 		defer stmt.Close()*/
 			
-		_, err = tx.Exec("INSERT INTO pettable VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", ctx.Msg.Author.ID, ctx.Msg.Author.Username, 1, 10, 10, 20, 1, 5, 80, 0, 0, 0, 0, 0, 0, AList[ctx.Msg.Author.ID].ID)
+		_, err = tx.Exec("INSERT INTO pettable VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?)", ctx.Msg.Author.ID, ctx.Msg.Author.Username, 1, 10, 10, 20, 1, 5, 80, 0, 0, 0, 0, 0, 0, AList[ctx.Msg.Author.ID].ID, false)
 		if err != nil {
 			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
 			delete(AList, ctx.Msg.Author.ID)
@@ -145,4 +146,14 @@ func timeoutAdoption(key string) {
 	fmt.Println("No response in 15 seconds, adoption aborting.")
 	delete(AList, key)
 	return
+}
+
+func showAdoptions(ctx context) {
+	var buffer bytes.Buffer
+	
+	for key, value := range AList {
+		buffer.WriteString("\n" + "AList[" + key + "]" + value.Username)
+	}
+	
+	ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, buffer.String())
 }
