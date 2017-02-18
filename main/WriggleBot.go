@@ -20,15 +20,16 @@ const (
 
 //GLOBAL VARS
 var (
-	conf       *config
-	BotID      string
-	DataStore  *sql.DB
-	CmdHandler *commandHandler
-	MemChan    chan *discordgo.User
-	AList      map[string]*discordgo.User
-	userReqLock = &sync.Mutex{}
-	tTick      *time.Ticker
-	trainingMap map[time.Time]training
+	conf         *config
+	BotID        string
+	DataStore    *sql.DB
+	CmdHandler   *commandHandler
+	MemChan      chan *discordgo.User
+	AList        map[string]*discordgo.User
+	userReqLock  = &sync.Mutex{}
+	tTick        *time.Ticker
+	trainingMap  map[time.Time]training
+	cooldownMap  map[string]time.Time
 )
 
 type config struct {
@@ -77,6 +78,7 @@ func main() {
 
 	//Initialize adoption list to track current adoptions in a global scope.
 	AList = make(map[string]*discordgo.User)
+	cooldownMap = make(map[string]time.Time)
 	MemChan = make(chan *discordgo.User)
 
 	//close database after Main ends, should only happen when program exits.
@@ -104,6 +106,8 @@ func main() {
 
 	tTick = time.NewTicker(time.Second)
 	go startTickReceiver()
+	go startCooldownTicker()
+	defer tTick.Stop()
 
 	fmt.Println("Bot is now running as user: ", u.Username)
 
@@ -139,6 +143,13 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if !found {
 		return
 	}
+	
+	if comman.hasCooldown() {
+		if comman.isOnCooldown(m.Author.ID) {
+			return
+		}
+		comman.startCooldown(m.Author.ID)
+	}
 
 	channel, err := s.State.Channel(m.ChannelID)
 	if err != nil {
@@ -161,7 +172,7 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	ctx.Channel = channel
 
 	//pass command pointer and run the function
-	c := *comman
+	c := comman.CmdFunc
 	go c(*ctx)
 }
 
@@ -185,12 +196,54 @@ func loadConfig(filename string) *config {
 
 
 func registerCommands() {
-	CmdHandler.register("adopt",       adoptUsers)
-	CmdHandler.register("quickbattle", quickBattle)
-	CmdHandler.register("train",       trainStat)
-	CmdHandler.register("pets",        listPets)
-	CmdHandler.register("statsheet",   petStatSheet)
-	CmdHandler.register("abandon",     abandon)
-	CmdHandler.register("flee",        flee)
+	CmdHandler.register("adopt",       adoptUsers,   0)
+	CmdHandler.register("quickbattle", quickBattle,  15)
+	CmdHandler.register("train",       trainStat,    0)
+	CmdHandler.register("pets",        listPets,     0)
+	CmdHandler.register("statsheet",   petStatSheet, 0)
+	CmdHandler.register("abandon",     abandon,      0)
+	CmdHandler.register("flee",        flee,         0)
+	CmdHandler.register("update",      sendBotWideNotice, 0)
 	//CmdHandler.register("showalist", showAdoptions)
+}
+
+func sendBotWideNotice(ctx context) {
+	if ctx.Msg.Author.ID != "96013796681736192" {
+		return
+	}
+	
+	embed := &discordgo.MessageEmbed {
+		Title: "WriggleBot Announcement",
+		Color: 14030101,
+		Author: &discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "https://discordapp.com/api/v6/users/209739190244474881/avatars/47ada5c68c51f8dc2360143c0751d656.jpg"},
+		Fields: []*discordgo.MessageEmbedField{
+			{"", `Dear WriggleBot users:
+WriggleBot has been completely rewritten! Most of the stuff has stayed the same except for a few major changes:
+1.) The commands addstat and remstat have been removed. These commands have been replaced with the command train, which looks like this:
+wrig train <petname> <petstats>
+This command will wait an amount of time based on the stats level and then "Levelup" the stat.
+2.) the command battle has been replaced with quickbattle, which still looks the same. Some foreshadowing of things to come.
+wrig quickbattle <pet1> <pet2>
+3.) WriggleBot will no longer respond to invalid commands. This includes commands where users are not found. or if you don't own a certain pet. This change will hopefully cut down on the spam Wriggle causes.
+4.) Commands can now be used by a 2 letter prefix. quickbattle is really long right? well, now you can also use:
+wrig qu <pet1> <pet2> 
+to call the command. this will work for every command.
+5.) Formatted output has been replaced with rich embeds. This message is one of those. WriggleBot said she deserved to be beautiful.
+6.) Unfortunately as a result of some massive under-the-hood changes and the removal of the older stat system in lieu of training. The old database is no longer compatible, as a result Pets will be completely reset. Everyone is now back to square one. again, I'm sorry. This shouldn't happen ever again.
+
+I'm sorry for how long it has been since there has been an update to our friend Wriggle. but they should now start coming more regularly. Expect future updates to include:
+- Further progression introducing an item and currency system.
+- More Challenge with Raids and party battles coming
+- More interaction with the interactive battles.
+- More communication from me. 
+
+Thank you for using WriggleBot, and if you have any questions feel free to contact me through discord at the username Soliel#0897
+		`, true},
+		},
+	}
+	
+	_, err := ctx.Session.ChannelMessageSendEmbed(ctx.Msg.ChannelID, embed)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
