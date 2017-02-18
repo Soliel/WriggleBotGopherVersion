@@ -42,7 +42,7 @@ func (handler commandHandler) get(name string) (*command, bool) {
 //Adds a command to the global command map and assigns it's name to be accessed by.
 func (handler commandHandler) register(name string, comman command) {
 	handler.Cmds[name] = comman
-	if len(name) > 1 {
-		handler.Cmds[name[:1]] = comman
+	if len(name) > 2 {
+		handler.Cmds[name[:2]] = comman
 	}
 }

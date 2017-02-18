@@ -39,14 +39,23 @@ func adoptUsers(ctx context) {
 		}
 		defer tx.Rollback()
 
-		/*stmt, err := tx.Prepare()
-		if err != nil {
-			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
-			delete(AList, ctx.Msg.Author.ID)
-			fmt.Println(err)
+		isOwned, err := checkDuplicatePets(ctx.Msg.Author.ID)
+		if err == nil && !isOwned {
+			_, err = tx.Exec("UPDATE pettable SET OwnerID = ? WHERE UserID = ?", AList[ctx.Msg.Author.ID].ID, ctx.Msg.Author.ID)
+			doOwnerUpdate(ctx)
+
+
+			err = tx.Commit()
+			if err != nil {
+				//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not commit changes to database, adoption aborted.")
+				delete(AList, ctx.Msg.Author.ID)
+				fmt.Println(err)
+				return
+			}
+
+			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You have been adopted!")
 			return
 		}
-		defer stmt.Close()*/
 			
 		_, err = tx.Exec("INSERT INTO pettable VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?)", ctx.Msg.Author.ID, ctx.Msg.Author.Username, 1, 10, 10, 20, 1, 5, 80, 0, 0, 0, 0, 0, 0, AList[ctx.Msg.Author.ID].ID, false)
 		if err != nil {
@@ -56,35 +65,7 @@ func adoptUsers(ctx context) {
 			return
 		}
 			
-		dupOwn := checkDuplicateOwners(AList[ctx.Msg.Author.ID].ID)
-		if !dupOwn {
-			//stmt, _ = tx.Prepare()
-			tx.Exec("INSERT INTO ownertable VALUES(?,?,?)", AList[ctx.Msg.Author.ID].ID, AList[ctx.Msg.Author.ID].Username, 1)
-		}
-			
-		if dupOwn {
-			
-			var petamnt int
-			
-			err = DataStore.QueryRow("SELECT PetAmount FROM ownertable WHERE UserID = ?", AList[ctx.Msg.Author.ID].ID).Scan(&petamnt)
-			if err != nil {
-				//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "SQL Query failed to find Owner, adoption aborting.")
-				return
-			}
-			
-			/*stmt, err = tx.Prepare()
-			if err != nil {
-				//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not prepare SQL statement, adoption aborted.")
-				return
-			}*/
-			
-			_, err := tx.Exec("UPDATE ownertable SET PetAmount = ? WHERE UserID = ?", petamnt + 1, AList[ctx.Msg.Author.ID].ID)
-			if err != nil {
-				fmt.Println(err)
-				//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
-				return
-			}
-		}
+		doOwnerUpdate(ctx)
 		
 		err = tx.Commit()
 		if err != nil {
@@ -112,33 +93,71 @@ func adoptUsers(ctx context) {
 		reqUser, err := ctx.Session.User(ctx.Args[0])
 		if err == nil {
 			userReqLock.Unlock()
-			dupErr := checkDuplicatePets(reqUser.ID)
-			if dupErr != nil {
-				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, dupErr.Error())
+
+			isOwned, _ := checkDuplicatePets(reqUser.ID)
+			if isOwned {
+				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Pet already has an owner.")
 				return
 			}
+
+			if reqUser.ID == ctx.Msg.Author.ID{
+				ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You cannot adopt yourself.")
+				return
+			}
+
 			AList[reqUser.ID] = ctx.Msg.Author
 			go timeoutAdoption(reqUser.ID)
+
 			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, reqUser.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
 			return 
 		}
 		userReqLock.Unlock()
 		return
 	}
+	userReqLock.Unlock()
 
-	dupErr := checkDuplicatePets(reqUser.ID)
-	if dupErr != nil {
-		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, dupErr.Error())
-		userReqLock.Unlock()
+	isOwned, _ := checkDuplicatePets(reqUser.ID)
+	if isOwned {
+		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Pet already has an owner")
+		return
+	}
+
+	if reqUser.ID == ctx.Msg.Author.ID{
+		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You cannot adopt yourself.")
 		return
 	}
 
 	AList[reqUser.ID] = ctx.Msg.Author
 	go timeoutAdoption(reqUser.ID)
-	userReqLock.Unlock()
 
 	ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, reqUser.Username + " Do you accept the adoption? if so type ``wrig adopt accept``, ``wrig adopt decline`` otherwise.")
 	return
+}
+
+func doOwnerUpdate(ctx context) {
+	dupOwn := checkDuplicateOwners(AList[ctx.Msg.Author.ID].ID)
+	if !dupOwn {
+		//stmt, _ = tx.Prepare()
+		DataStore.Exec("INSERT INTO ownertable VALUES(?,?,?)", AList[ctx.Msg.Author.ID].ID, AList[ctx.Msg.Author.ID].Username, 1)
+	}
+
+	if dupOwn {
+
+		var petamnt int
+
+		err := DataStore.QueryRow("SELECT PetAmount FROM ownertable WHERE UserID = ?", AList[ctx.Msg.Author.ID].ID).Scan(&petamnt)
+		if err != nil {
+			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "SQL Query failed to find Owner, adoption aborting.")
+			return
+		}
+
+		_, err = DataStore.Exec("UPDATE ownertable SET PetAmount = ? WHERE UserID = ?", petamnt + 1, AList[ctx.Msg.Author.ID].ID)
+		if err != nil {
+			fmt.Println(err)
+			//ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "Could not execute SQL statement with the database, adoption aborted.")
+			return
+		}
+	}
 }
 
 //This should always be called in a goroutine. Creates an intentional "race" so that after 15 seconds the adoption times out.
@@ -178,6 +197,74 @@ func listPets(ctx context) {
 	ctx.Session.ChannelMessageSendEmbed(ctx.Msg.ChannelID, &listEmbed)
 }
 
+func abandon(ctx context) {
+	if len(ctx.Args) < 1 {
+		return
+	}
+
+	var ownerID string
+
+	reqPet, err := getPetUser(ctx.Args[0], ctx)
+	if err != nil {
+		return
+	}
+
+	tx, err := DataStore.Begin()
+	if err != nil {
+		return
+	}
+	defer tx.Rollback()
+
+	//Check if they exist and are owned by the sender
+	err = DataStore.QueryRow("SELECT OwnerID FROM pettable WHERE UserID = ?", reqPet.ID).Scan(&ownerID)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if ownerID != ctx.Msg.Author.ID {
+		fmt.Println(err)
+		return
+	}
+
+	_, err = tx.Exec("UPDATE pettable SET OwnerID = \"\" WHERE UserID = ?", reqPet.ID)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	_, err = tx.Exec("UPDATE ownertable SET PetAmount = PetAmount - 1 WHERE UserID = ?", ownerID)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	tx.Commit()
+	ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You have abandoned " + reqPet.Username + " alone in the rain.")
+
+}
+
+func flee(ctx context) {
+	reqPet, err := getPetUser(ctx.Msg.Author.Username, ctx)
+	if err != nil {
+		return
+	}
+
+	_, err = DataStore.Exec("UPDATE pettable SET OwnerID = \"\" WHERE UserID = ?", ctx.Msg.Author.ID)
+	if err != nil {
+		return
+	}
+
+	ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You have fled from your owner.")
+
+	pmChannel, err := ctx.Session.UserChannelCreate(reqPet.OwnerID)
+	if err != nil {
+		return
+	}
+
+	ctx.Session.ChannelMessageSend(pmChannel.ID, "Your pet, " + reqPet.Username + ", has fled from you.")
+}
+//Useful for debugging adoptions.
+/*
 func showAdoptions(ctx context) {
 	var buffer bytes.Buffer
 	
@@ -186,4 +273,4 @@ func showAdoptions(ctx context) {
 	}
 	
 	ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, buffer.String())
-}
+}*/

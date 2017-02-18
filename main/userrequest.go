@@ -49,19 +49,19 @@ func requestUserFromGuild(s *discordgo.Session, guild string, user string) (*dis
 	}
 }
 
-func checkDuplicatePets(ID string) (e error){
+func checkDuplicatePets(ID string) (isowned bool, e error){
 	var OID string
 	err := DataStore.QueryRow("SELECT OwnerID FROM pettable WHERE UserID = ?", ID).Scan(&OID)
 	if err != nil {
-		if err.Error() == "sql: no rows in result set" {return nil}
-		return err
+		if err.Error() == "sql: no rows in result set" {return false, errors.New("Pet does not exist")}
+		return false, err
 	}
 
 	if OID != "" {
-		return errors.New("Pet already has an owner")
+		return true, nil
 	}
 
-	return  nil
+	return  false, nil
 }
 
 func checkDuplicateOwners(ID string) (exists bool) {
@@ -101,9 +101,9 @@ func getPetUser(userid string, ctx context) (pet, error) {
 
 func getPetFromDB(petID string) (pet, error) {
 	reqPet := new(pet)
-	
+
 	var (
-		AttribATK, AttribDEF, AttribHP, AttribLCK, 
+		AttribATK, AttribDEF, AttribHP, AttribLCK,
 		TrainedATK, TrainedDEF, TrainedCRI, Experience float64
 		OwnerID, PetID, PetName string
 		Level,AttribEVA, AttribACC, TrainedEVA, TrainedACC int
@@ -146,6 +146,8 @@ func getPetFromDB(petID string) (pet, error) {
 	return *reqPet, nil
 }
 
+//Function will be useful for future purposes
+/*
 func getOwnerFromDB(OwnerID string) (owner, error) {
 	var(
 		ID, Username     string
@@ -161,4 +163,4 @@ func getOwnerFromDB(OwnerID string) (owner, error) {
 	}
 
 	return owner{ID: ID, Username: Username, Level: Level, PetAmount: PetAmount}, nil
-}
+}*/
