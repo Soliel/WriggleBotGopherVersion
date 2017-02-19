@@ -20,8 +20,10 @@ func adoptUsers(ctx context) {
 
 
 	if ctx.Args[0] == "decline" {
-		ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You were not adopted.")
-		delete(AList, ctx.Msg.Author.ID)
+		if AList[ctx.Msg.Author.ID] != nil {
+			ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You were not adopted.")
+			delete(AList, ctx.Msg.Author.ID)
+		}
  		return
 	}
   
@@ -162,8 +164,8 @@ func doOwnerUpdate(ctx context) {
 
 //This should always be called in a goroutine. Creates an intentional "race" so that after 15 seconds the adoption times out.
 func timeoutAdoption(key string) {
-	time.Sleep(time.Second*15)
-	fmt.Println("No response in 15 seconds, adoption aborting.")
+	time.Sleep(time.Second*60)
+	//fmt.Println("No response in 15 seconds, adoption aborting.")
 	delete(AList, key)
 	return
 }

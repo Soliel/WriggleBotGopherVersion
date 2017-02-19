@@ -153,6 +153,13 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 				args = append(args, tempArgs[s])
 			}
 		}
+
+		args[0] = strings.TrimPrefix(args[0], " ")
+		args[0] = strings.TrimSuffix(args[0], " ")
+		if strings.Contains(args[0], " ") {
+			firstArgs := strings.Fields(args[0])
+			args = append(firstArgs[:], args[1:]...)
+		}
 	} else {
 		args = strings.Fields(content)
 	}
@@ -230,7 +237,8 @@ func registerCommands() {
 func help(ctx context) {
 	var embed discordgo.MessageEmbed
 	var embedField discordgo.MessageEmbedField
-	if len(ctx.Args) == 0 {
+	var textOnly bool
+	if len(ctx.Args) == 0 || ctx.Args[0] == "textonly"{
 		message  := "Thank you for using WriggleBot\n\n" +
 		"The commands are:\n\n" +
 		"Adopt <User to Adopt|accept|decline> \n\n" +
@@ -247,6 +255,10 @@ func help(ctx context) {
 		embedField.Value = message
 		embedField.Name = "Main Help"
 		embedField.Inline = false
+
+		if ctx.Args[0] == "textonly" {
+			textOnly = true
+		}
 	}
 
 	if len(ctx.Args) > 0 {
@@ -339,6 +351,12 @@ func help(ctx context) {
 			embedField.Value = message
 			embedField.Name = "Leveling Message Opt Out Help"
 		}
+
+		if len(ctx.Args) == 2 {
+			if ctx.Args[1] == "textonly" {
+				textOnly = true
+			}
+		}
 	}
 	embed.Color = 14030101
 	embed.Fields = []*discordgo.MessageEmbedField{&embedField}
@@ -348,10 +366,13 @@ func help(ctx context) {
 		return
 	}
 
+	if textOnly {
+		ctx.Session.ChannelMessageSend(pmChannel.ID, embedField.Value)
+		return
+	}
+
 	_, err  = ctx.Session.ChannelMessageSendEmbed(pmChannel.ID, &embed)
 	if err != nil {
 		fmt.Println(err)
 	}
-
-
 }
