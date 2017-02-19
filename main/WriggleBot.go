@@ -72,6 +72,11 @@ func main() {
 		return
 	}
 
+	_, err = DataStore.Exec("SET NAMES utf8")
+	if err != nil {
+		fmt.Println("Failure to set databse connection to UTF 8")
+	}
+
 	//initialize the Command Handler & Register Commands
 	CmdHandler = newCommandHandler()
 	registerCommands()
@@ -136,7 +141,21 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	content = strings.ToLower(content)
-	args := strings.Fields(content)
+
+	var args []string
+
+	//If someones name has spaces this allows them to fix it.
+	if strings.Contains(content, "\"") {
+		tempArgs := strings.Split(content, "\"")
+		for s := range tempArgs {
+			tempArgs[s] = strings.TrimSpace(tempArgs[s])
+			if tempArgs[s] != "" {
+				args = append(args, tempArgs[s])
+			}
+		}
+	} else {
+		args = strings.Fields(content)
+	}
 	name := args[0]
 
 	comman, found := CmdHandler.get(name)
