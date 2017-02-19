@@ -28,8 +28,8 @@ type pet struct {
 type owner struct {
 	ID        string
 	Username  string
-	Level     int
 	PetAmount int
+	OptedOut  bool
 }
 
 //Called when requestUserFromGuild is called, it returns a guildMemberChunk asynchronously, uses a channel to return it's value back to it's requester.
@@ -147,20 +147,21 @@ func getPetFromDB(petID string) (pet, error) {
 }
 
 //Function will be useful for future purposes
-/*
+
 func getOwnerFromDB(OwnerID string) (owner, error) {
 	var(
 		ID, Username     string
-		Level, PetAmount int
+		PetAmount int
+		OptedOut bool
 	)
 
 	var reqOwner owner
 	
-	err := DataStore.QueryRow("SELECT * FROM ownertable WHERE UserID = ?", OwnerID).Scan(&ID, &Username, &Level, &PetAmount)
+	err := DataStore.QueryRow("SELECT * FROM ownertable WHERE UserID = ?", OwnerID).Scan(&ID, &Username, &PetAmount, &OptedOut)
 
 	if err != nil{
 		return reqOwner, err
 	}
 
-	return owner{ID: ID, Username: Username, Level: Level, PetAmount: PetAmount}, nil
-}*/
+	return owner{ID: ID, Username: Username, PetAmount: PetAmount, OptedOut: OptedOut}, nil
+}

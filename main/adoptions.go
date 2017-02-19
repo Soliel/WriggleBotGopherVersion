@@ -138,7 +138,7 @@ func doOwnerUpdate(ctx context) {
 	dupOwn := checkDuplicateOwners(AList[ctx.Msg.Author.ID].ID)
 	if !dupOwn {
 		//stmt, _ = tx.Prepare()
-		DataStore.Exec("INSERT INTO ownertable VALUES(?,?,?)", AList[ctx.Msg.Author.ID].ID, AList[ctx.Msg.Author.ID].Username, 1)
+		DataStore.Exec("INSERT INTO ownertable VALUES(?,?,?,?)", AList[ctx.Msg.Author.ID].ID, AList[ctx.Msg.Author.ID].Username, 1, true)
 	}
 
 	if dupOwn {

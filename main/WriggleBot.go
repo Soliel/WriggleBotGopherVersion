@@ -157,19 +157,18 @@ func onMessageReceived(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	guild, err := s.State.Guild(channel.GuildID)
-	if err != nil {
-		fmt.Println("Error getting guild, ", err)
-		return
-	}
-
 	//set up my context to pass to whatever function is called.
 	ctx := new(context)
 	ctx.Args = args[1:]
 	ctx.Session = s
 	ctx.Msg = m
-	ctx.Guild = guild
 	ctx.Channel = channel
+
+	guild, err := s.State.Guild(channel.GuildID)
+	if err == nil {
+		ctx.Guild = guild
+	}
+
 
 	//pass command pointer and run the function
 	c := comman.CmdFunc
@@ -203,47 +202,137 @@ func registerCommands() {
 	CmdHandler.register("statsheet",   petStatSheet, 0)
 	CmdHandler.register("abandon",     abandon,      0)
 	CmdHandler.register("flee",        flee,         0)
-	CmdHandler.register("update",      sendBotWideNotice, 0)
+	CmdHandler.register("help",        help,         0)
+	CmdHandler.register("optout",      levelOptOut,  0)
 	//CmdHandler.register("showalist", showAdoptions)
 }
 
-func sendBotWideNotice(ctx context) {
-	if ctx.Msg.Author.ID != "96013796681736192" {
+//TODO: Move help dialog to a configuration file.
+func help(ctx context) {
+	var embed discordgo.MessageEmbed
+	var embedField discordgo.MessageEmbedField
+	if len(ctx.Args) == 0 {
+		message  := "Thank you for using WriggleBot\n\n" +
+		"The commands are:\n\n" +
+		"Adopt <User to Adopt|accept|decline> \n\n" +
+		"Train <pet to train> <stat to train> \n\n" +
+		"Quickbattle <your pet> <pet to battle> \n\n" +
+		"Pets \n\n" +
+		"Statsheet <pet to view> \n\n" +
+		"Abandon <pet to abandon> \n\n" +
+		"Flee \n\n" +
+		"OptOut <true|false>\n\n" +
+		"To find out what a specific command does, type:\n\n" +
+		"wrig help <command>"
+
+		embedField.Value = message
+		embedField.Name = "Main Help"
+		embedField.Inline = false
+	}
+
+	if len(ctx.Args) > 0 {
+		switch ctx.Args[0] {
+		case "adopt":
+			message := "This command adopts a user.\n\n" +
+				"Once run this command will start an adoption of another user, turning them into your pet. " +
+				"adoptions will last for 15 seconds before they time out, " +
+				"Adopt a user using:\n" +
+				"``wrig adopt <user>``\n\n" +
+				"within 15 seconds user must type:\n\n" +
+				"``wrig adopt accept\n\n``" +
+				"In order to be adopted. Otherwise the command will do nothing.\n\n" +
+				"You may either type the users username, nick, or mention them in order to adopt them.\n\n" +
+				"If you do not know what a pet is, please type wrig help pets"
+
+			embedField.Value = message
+			embedField.Name = "Adopt Help"
+
+		case "quickbattle":
+			message := "This command allows you to battle your pet against someone elses.\n\n" +
+				"``wrig quickbattle <your pet> <enemy pet>``\n\n" +
+				"This command will not work with mentions.\n\n" +
+				"If you do not know what a pet is, please type wrig help pets"
+
+			embedField.Value = message
+			embedField.Name = "Quick Battle Help"
+
+		case "train":
+			message := "This command allows you to train your pet, increasing it's effectiveness in battles.\n\n" +
+				"Once run, this command will trigger a timer, after the timers duration is up your pet will gain a level in a certain stat\n\n" +
+				"``wrig train <your pet> <stat to train>``\n\n" +
+				"The training duration increases as you level up a stat but will not exceed 24 hours.\n\n" +
+				"Valid stats are:\n\n" +
+				"Attack\n" +
+				"Defense\n" +
+				"Crit\n" +
+				"Evasion\n" +
+				"Accuracy\n\n" +
+				"This command will not work with mentions."
+
+			embedField.Value = message
+			embedField.Name = "Training Help"
+
+		case "pets":
+			message := "This command will bring up the list of pets you own.\n\n" +
+				"``wrig pets``\n\n" +
+				"Pets are other users that have been adopted by someone. " +
+				"They can be used to battle against one another and, eventually, to challenge harder fights.\n\n" +
+				"A pet will grow as it gains experience and will \"Level up.\" A notification is sent to the owner upon level up unless they have opted out.\n\n" +
+				"A pet can also get stronger by training using the train command"
+
+			embedField.Value = message
+			embedField.Name = "Pets Help"
+
+		case "statsheet":
+			message := "This command will bring up a formatted list of the designated pet's combat stats and level." +
+				"``wrig statsheet <pet>``\n\n" +
+				"This command may be used regardless of whether you own the pet or not.\n\n" +
+				"This command will not work with mentions."
+
+			embedField.Value = message
+			embedField.Name = "Stat Sheet Help"
+
+		case "abandon":
+			message := "This command will allow you to abandon a pet if you do not like them or want to give them to someone else.\n\n" +
+				"``wrig abandon <your pet>``\n\n" +
+				"This command will not work with mentions."
+
+			embedField.Value = message
+			embedField.Name = "Abandonment Help"
+
+		case "flee":
+			message := "This command is only usable by pets and allows them to leave an owner they do not like. " +
+				"Intended for instances where you are not recieving training or battle experience\n\n" +
+				"``wrig flee``\n\n" +
+				"This will cause you to flee from the owner and cannot be undone unless you get adopted by them again."
+
+			embedField.Value = message
+			embedField.Name = "Fleeing Help"
+
+		case "optout":
+			message := "This command will allow you to opt in or out of level up PMs.\n\n" +
+				"By default this feature is opted out.\n\n" +
+				"To opt in:\n" +
+				"``wrig optout false``\n\n" +
+				"To opt out again:\n" +
+				"``wrig optout true``"
+
+			embedField.Value = message
+			embedField.Name = "Leveling Message Opt Out Help"
+		}
+	}
+	embed.Color = 14030101
+	embed.Fields = []*discordgo.MessageEmbedField{&embedField}
+
+	pmChannel, err := ctx.Session.UserChannelCreate(ctx.Msg.Author.ID)
+	if err != nil {
 		return
 	}
-	
-	embed := &discordgo.MessageEmbed {
-		Title: "WriggleBot Announcement",
-		Color: 14030101,
-		Author: &discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "https://discordapp.com/api/v6/users/209739190244474881/avatars/47ada5c68c51f8dc2360143c0751d656.jpg"},
-		Fields: []*discordgo.MessageEmbedField{
-			{"", `Dear WriggleBot users:
-WriggleBot has been completely rewritten! Most of the stuff has stayed the same except for a few major changes:
-1.) The commands addstat and remstat have been removed. These commands have been replaced with the command train, which looks like this:
-wrig train <petname> <petstats>
-This command will wait an amount of time based on the stats level and then "Levelup" the stat.
-2.) the command battle has been replaced with quickbattle, which still looks the same. Some foreshadowing of things to come.
-wrig quickbattle <pet1> <pet2>
-3.) WriggleBot will no longer respond to invalid commands. This includes commands where users are not found. or if you don't own a certain pet. This change will hopefully cut down on the spam Wriggle causes.
-4.) Commands can now be used by a 2 letter prefix. quickbattle is really long right? well, now you can also use:
-wrig qu <pet1> <pet2> 
-to call the command. this will work for every command.
-5.) Formatted output has been replaced with rich embeds. This message is one of those. WriggleBot said she deserved to be beautiful.
-6.) Unfortunately as a result of some massive under-the-hood changes and the removal of the older stat system in lieu of training. The old database is no longer compatible, as a result Pets will be completely reset. Everyone is now back to square one. again, I'm sorry. This shouldn't happen ever again.
 
-I'm sorry for how long it has been since there has been an update to our friend Wriggle. but they should now start coming more regularly. Expect future updates to include:
-- Further progression introducing an item and currency system.
-- More Challenge with Raids and party battles coming
-- More interaction with the interactive battles.
-- More communication from me. 
-
-Thank you for using WriggleBot, and if you have any questions feel free to contact me through discord at the username Soliel#0897
-		`, true},
-		},
-	}
-	
-	_, err := ctx.Session.ChannelMessageSendEmbed(ctx.Msg.ChannelID, embed)
+	_, err  = ctx.Session.ChannelMessageSendEmbed(pmChannel.ID, &embed)
 	if err != nil {
 		fmt.Println(err)
 	}
+
+
 }

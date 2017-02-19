@@ -236,6 +236,15 @@ func getLevels(attacker *pet, defender *pet, won bool, ctx context) {
 }
 
 func levelPM(leveledPet pet, ctx context) {
+	levelOwner, err := getOwnerFromDB(leveledPet.OwnerID)
+	if err != nil {
+		return
+	}
+
+	if levelOwner.OptedOut {
+		return
+	}
+
 	pmChannel, err := ctx.Session.UserChannelCreate(leveledPet.OwnerID)
 	if err != nil {
 		return
@@ -261,4 +270,20 @@ func doPetLevelUp(upPet pet) (error){
 
 	tx.Commit()
 	return nil
+}
+
+func levelOptOut(ctx context) {
+	if len(ctx.Args) < 1 {
+		return
+	}
+
+	if ctx.Args[0] == "true" {
+		DataStore.Exec("UPDATE ownertable SET OptedOut = TRUE WHERE UserID = ?", ctx.Msg.Author.ID)
+	}
+
+	if ctx.Args[0] == "false" {
+		DataStore.Exec("UPDATE ownertable SET OptedOut = FALSE WHERE UserID = ?", ctx.Msg.Author.ID)
+	}
+
+	ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "You have been opted out of levelup PMs.")
 }
