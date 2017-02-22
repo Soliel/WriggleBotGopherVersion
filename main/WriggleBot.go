@@ -238,7 +238,7 @@ func help(ctx context) {
 	var embed discordgo.MessageEmbed
 	var embedField discordgo.MessageEmbedField
 	var textOnly bool
-	if len(ctx.Args) == 0 || ctx.Args[0] == "textonly"{
+	if len(ctx.Args) == 0 {
 		message  := "Thank you for using WriggleBot\n\n" +
 		"The commands are:\n\n" +
 		"Adopt <User to Adopt|accept|decline> \n\n" +
@@ -255,7 +255,9 @@ func help(ctx context) {
 		embedField.Value = message
 		embedField.Name = "Main Help"
 		embedField.Inline = false
+	}
 
+	if len(ctx.Args) == 1 {
 		if ctx.Args[0] == "textonly" {
 			textOnly = true
 		}

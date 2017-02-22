@@ -5,6 +5,7 @@ import (
 	//"fmt"
 	"errors"
 	"time"
+	"math"
 )
 
 //Defines a pet, lots of information
@@ -16,11 +17,11 @@ type pet struct {
 	EffectiveDEF float64; AttribDEF    float64
 	EffectiveHP  float64; AttribHP     float64
 	EffectiveCRI float64; AttribLCK    float64
-	DMGCount     float64; AttribEVA    int
-	EffectiveEVA int;     AttribACC    int
-	EffectiveACC int;     TrainedCRI   float64
-	TrainedATK   float64; TrainedEVA   int
-	TrainedDEF   float64; TrainedACC   int
+	DMGCount     float64; AttribEVA    float64
+	EffectiveEVA float64; AttribACC    float64
+	EffectiveACC float64; TrainedCRI   float64
+	TrainedATK   float64; TrainedEVA   float64
+	TrainedDEF   float64; TrainedACC   float64
 	CritCount    int64;   MissCount    int64
 	Experience   float64; Level        int
 }
@@ -103,10 +104,10 @@ func getPetFromDB(petID string) (pet, error) {
 	reqPet := new(pet)
 
 	var (
-		AttribATK, AttribDEF, AttribHP, AttribLCK,
-		TrainedATK, TrainedDEF, TrainedCRI, Experience float64
+		AttribATK, AttribDEF, AttribHP, AttribLCK, AttribACC,
+		TrainedATK, TrainedDEF, TrainedCRI, Experience, AttribEVA, TrainedEVA, TrainedACC float64
 		OwnerID, PetID, PetName string
-		Level,AttribEVA, AttribACC, TrainedEVA, TrainedACC int
+		Level int
 		Training bool
 	)
 
@@ -121,12 +122,12 @@ func getPetFromDB(petID string) (pet, error) {
 	}
 
 	//Stand in math for effective stats
-	reqPet.EffectiveATK = AttribATK*(1+(0.2 * TrainedATK))
+	reqPet.EffectiveATK = AttribATK*(1+(0.002 * TrainedATK))
 	reqPet.EffectiveDEF = AttribDEF + TrainedDEF
-	reqPet.EffectiveHP  = AttribHP * (1 + (.0013 * TrainedDEF))
+	reqPet.EffectiveHP  = AttribHP * (1 + (.0045 * TrainedDEF))
 	reqPet.EffectiveCRI = (0.04*AttribLCK) + (0.08 * TrainedCRI)
-	reqPet.EffectiveEVA = AttribEVA + TrainedEVA
-	reqPet.EffectiveACC = AttribACC + TrainedACC
+	reqPet.EffectiveEVA = AttribEVA + (400/( 1 + math.Pow(math.E, -(.013 * (TrainedEVA-200))))) - 27.655
+	reqPet.EffectiveACC = AttribACC + (400/( 1 + math.Pow(math.E, -(.013 * (TrainedACC-200))))) - 27.655
 	reqPet.AttribATK    = AttribATK
 	reqPet.AttribDEF    = AttribDEF
 	reqPet.AttribHP     = AttribHP

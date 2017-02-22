@@ -89,9 +89,9 @@ func getDamage(attacker *pet, defender pet) (float64) {
 
 //Rolls imaginary dice to see if the attack hits.
 func doesHit(attacker *pet, defender pet) (bool){
-	chanceToHit := attacker.EffectiveACC - defender.EffectiveEVA
+	chanceToHit := float64(attacker.EffectiveACC) - defender.EffectiveEVA
 	
-	if rand.Intn(100) < chanceToHit {
+	if float64(rand.Intn(100)) < chanceToHit {
 		return true
 	}
 	
@@ -117,52 +117,25 @@ func doesCrit(attacker *pet) (bool) {
 
 //Creating the embed structure, Go throws an error when I put all the asignments for a field inline
 func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
-	var winnerName, loserName, winnerMissCount, winnerCritCount, winnerDamageCount, loserMissCount, loserCritCount, loserDamageCount discordgo.MessageEmbedField
-	var resultEmbed discordgo.MessageEmbed
 
-	winnerThumb := discordgo.MessageEmbedThumbnail{URL: "https://discordapp.com/api/v6/users/" + winner.ID + "/avatars/" + winner.Avatar + ".jpg", ProxyURL:"", Width:0, Height:0}
+	resultEmbed := &discordgo.MessageEmbed{
+		Title: "Battle Results",
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: "https://discordapp.com/api/v6/users/" + winner.ID + "/avatars/" + winner.Avatar + ".jpg", ProxyURL:"", Width:0, Height:0},
+		Author: &discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "https://discordapp.com/api/v6/users/209739190244474881/avatars/47ada5c68c51f8dc2360143c0751d656.jpg"},
+		Color: 14030101,
+		Fields: []*discordgo.MessageEmbedField {
+			{"Winner", winner.Username, true},
+			{"Loser", loser.Username, true},
+			{winner.Username + " misses", strconv.FormatInt(int64(winner.MissCount), 10), true},
+			{loser.Username + " misses", strconv.FormatInt(int64(loser.MissCount), 10), true},
+			{winner.Username + " crits", strconv.FormatInt(int64(winner.CritCount), 10), true},
+			{loser.Username + " crits", strconv.FormatInt(int64(loser.CritCount), 10), true},
+			{winner.Username + " damage dealt", strconv.FormatFloat(winner.DMGCount, 'f', 2, 64), true},
+			{loser.Username + " damage dealt", strconv.FormatFloat(loser.DMGCount, 'f', 2, 64), true},
+		},
+	}
 
-	embedAuthor := discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "https://discordapp.com/api/v6/users/209739190244474881/avatars/47ada5c68c51f8dc2360143c0751d656.jpg"}
-
-	winnerName.Name = "Winner"
-	winnerName.Value = winner.Username
-	winnerName.Inline = true
-	
-	loserName.Name = "Loser"
-	loserName.Value = loser.Username
-	loserName.Inline = true
-	
-	winnerMissCount.Name = winner.Username + " misses"
-	winnerMissCount.Value = strconv.FormatInt(winner.MissCount, 10)
-	winnerMissCount.Inline = true
-	
-	loserMissCount.Name = loser.Username  + " misses"
-	loserMissCount.Value = strconv.FormatInt(loser.MissCount, 10)
-	loserMissCount.Inline = true
-	
-	winnerCritCount.Name = winner.Username + " crits"
-	winnerCritCount.Value = strconv.FormatInt(winner.CritCount, 10)
-	winnerCritCount.Inline = true
-	
-	loserCritCount.Name = loser.Username  + " crits"
-	loserCritCount.Value = strconv.FormatInt(loser.CritCount, 10)
-	loserCritCount.Inline = true
-	
-	winnerDamageCount.Name = winner.Username + " damage dealt"
-	winnerDamageCount.Value = strconv.FormatFloat(winner.DMGCount, 'f', 2, 64)
-	winnerDamageCount.Inline = true
-	
-	loserDamageCount.Name = loser.Username + " damage dealt"
-	loserDamageCount.Value = strconv.FormatFloat(loser.DMGCount, 'f', 2, 64)
-	loserDamageCount.Inline = true
-
-	resultEmbed.Title  = "Battle Results"
-	resultEmbed.Author = &embedAuthor
-	resultEmbed.Thumbnail = &winnerThumb
-	resultEmbed.Fields = []*discordgo.MessageEmbedField{&winnerName, &loserName, &winnerMissCount, &loserMissCount, &winnerCritCount, &loserCritCount, &winnerDamageCount, &loserDamageCount}
-	resultEmbed.Color = 14030101
-
-	return &resultEmbed
+	return resultEmbed
 }
 
 
