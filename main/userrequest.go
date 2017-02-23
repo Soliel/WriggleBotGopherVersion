@@ -6,11 +6,11 @@ import (
 	"errors"
 	"time"
 	"math"
+	"strings"
 )
 
 //Defines a pet, lots of information
 type pet struct {
-	Training     bool
 	Username     string;  OwnerID      string
 	Avatar       string;  ID           string
 	EffectiveATK float64; AttribATK    float64
@@ -23,6 +23,7 @@ type pet struct {
 	TrainedATK   float64; TrainedEVA   float64
 	TrainedDEF   float64; TrainedACC   float64
 	CritCount    int64;   MissCount    int64
+	SwingCount   int64;   Training     bool
 	Experience   float64; Level        int
 }
 
@@ -85,16 +86,29 @@ func getPetUser(userid string, ctx context) (pet, error) {
 	userReqLock.Lock()
 	PetUser, err := requestUserFromGuild(ctx.Session, ctx.Guild.ID, userid)
 	if err != nil {
-		_,_ = ctx.Session.ChannelMessageSend(ctx.Msg.ChannelID, "One of the Users could not be found")
-		userReqLock.Unlock()
-		return reqPet, err
+		var modifiedID string
+
+		if strings.HasPrefix(userid, "<@") {
+			modifiedID = strings.Trim(userid, "<@!>")
+		}
+
+		PetUser, err = ctx.Session.User(modifiedID)
+		if err != nil {
+			userReqLock.Unlock()
+			return reqPet, err
+		}
 	}
 
 	userReqLock.Unlock()
 	reqPet, err = getPetFromDB(PetUser.ID)
 
+	if PetUser.Avatar == "" {
+		reqPet.Avatar = "https://discordapp.com/assets/dd4dbc0016779df1378e7812eabaa04d.png" //Sets the avatar data to discords default if we do not have any data.
+	} else {
+		reqPet.Avatar   = "https://discordapp.com/api/v6/users/" + PetUser.ID + "/avatars/" + PetUser.Avatar + ".jpg"
+	}
+
 	reqPet.Username = PetUser.Username
-	reqPet.Avatar   = PetUser.Avatar
 	reqPet.ID       = PetUser.ID
 
 	return reqPet, nil

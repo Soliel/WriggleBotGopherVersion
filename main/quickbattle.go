@@ -55,7 +55,8 @@ func quickBattle(ctx context) {
 
 			return
 		}
-		
+
+		allypet.SwingCount ++
 		if doesHit(&allypet, enemypet) {
 			dmg := getDamage(&allypet, enemypet)
 			enemypet.EffectiveHP -= dmg
@@ -69,7 +70,8 @@ func quickBattle(ctx context) {
 			getLevels(&allypet, &enemypet, true, ctx)
 			return
 		}
-			
+
+		enemypet.SwingCount ++
 		if doesHit(&enemypet, allypet) {
 			dmg := getDamage(&enemypet, allypet)
 			allypet.EffectiveHP -= dmg
@@ -120,16 +122,18 @@ func createResultEmbed(winner pet, loser pet) (*discordgo.MessageEmbed){
 
 	resultEmbed := &discordgo.MessageEmbed{
 		Title: "Battle Results",
-		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: "https://discordapp.com/api/v6/users/" + winner.ID + "/avatars/" + winner.Avatar + ".jpg", ProxyURL:"", Width:0, Height:0},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: winner.Avatar, ProxyURL:"", Width:0, Height:0},
 		Author: &discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "https://discordapp.com/api/v6/users/209739190244474881/avatars/47ada5c68c51f8dc2360143c0751d656.jpg"},
 		Color: 14030101,
 		Fields: []*discordgo.MessageEmbedField {
 			{"Winner", winner.Username, true},
 			{"Loser", loser.Username, true},
-			{winner.Username + " misses", strconv.FormatInt(int64(winner.MissCount), 10), true},
-			{loser.Username + " misses", strconv.FormatInt(int64(loser.MissCount), 10), true},
-			{winner.Username + " crits", strconv.FormatInt(int64(winner.CritCount), 10), true},
-			{loser.Username + " crits", strconv.FormatInt(int64(loser.CritCount), 10), true},
+			{winner.Username + " swings", strconv.FormatInt(winner.SwingCount, 10), true},
+			{loser.Username + " swings", strconv.FormatInt(loser.SwingCount, 10), true},
+			{winner.Username + " misses", strconv.FormatInt(winner.MissCount, 10), true},
+			{loser.Username + " misses", strconv.FormatInt(loser.MissCount, 10), true},
+			{winner.Username + " crits", strconv.FormatInt(winner.CritCount, 10), true},
+			{loser.Username + " crits", strconv.FormatInt(loser.CritCount, 10), true},
 			{winner.Username + " damage dealt", strconv.FormatFloat(winner.DMGCount, 'f', 2, 64), true},
 			{loser.Username + " damage dealt", strconv.FormatFloat(loser.DMGCount, 'f', 2, 64), true},
 		},

@@ -34,7 +34,7 @@ func petStatSheet (ctx context) {
 	embed := &discordgo.MessageEmbed{
 		Title: reqPet.Username + "'s stat sheet",
 		Color: 14030101,
-		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: "https://discordapp.com/api/v6/users/" + reqPet.ID + "/avatars/" + reqPet.Avatar + ".jpg", ProxyURL:"", Width:0, Height:0},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{URL: reqPet.Avatar, ProxyURL:"", Width:0, Height:0},
 		Author: &discordgo.MessageEmbedAuthor{URL: "", Name: "WriggleBot", IconURL: "https://discordapp.com/api/v6/users/209739190244474881/avatars/47ada5c68c51f8dc2360143c0751d656.jpg"},
 		Fields: []*discordgo.MessageEmbedField{
 			{"Level", strconv.FormatInt(int64(reqPet.Level), 10), true},

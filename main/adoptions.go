@@ -83,7 +83,7 @@ func adoptUsers(ctx context) {
 
 	//Get the Snowflake ID from a mention.
 	if strings.HasPrefix(ctx.Args[0], "<@") {
-		ctx.Args[0] = strings.Trim(ctx.Args[0], "<@>")
+		ctx.Args[0] = strings.Trim(ctx.Args[0], "<@!>")
 	}
 
 
